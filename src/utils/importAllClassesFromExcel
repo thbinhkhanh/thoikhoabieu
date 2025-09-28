@@ -1,0 +1,69 @@
+import ExcelJS from "exceljs";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
+
+// Import TKB toàn trường từ file Excel -> ghi ngược vào Firestore
+export const importAllClassesFromExcel = async (file) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(file);
+
+  const ws = workbook.getWorksheet("TKB Toàn Trường");
+  const weekdays = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
+
+  const blockHeight = 47; // mỗi lớp chiếm 47 dòng
+  const tietSang = 5;
+  const tietChieu = 4;
+
+  let offset = 0;
+
+  while (true) {
+    // ==== Lấy tên lớp ở E7 + offset ====
+    const lopCell = ws.getCell(`E${7 + offset}`);
+    if (!lopCell.value) break; // hết dữ liệu
+
+    const lopText = String(lopCell.value || "").trim(); // "LỚP: 1.1"
+    const match = lopText.match(/(\d+\.\d+)$/); // lấy lớp dạng x.y
+    if (!match) {
+      offset += blockHeight;
+      continue;
+    }
+    const lopName = match[1]; // ví dụ "1.1"
+
+    const schedule = { SÁNG: {}, CHIỀU: {} };
+
+    // ==== Header ở row 9 + offset ====
+    const rowHeader = 9 + offset;
+    let currentRow = rowHeader + 1;
+
+    // ==== Đọc buổi SÁNG (5 tiết) ====
+    for (let r = 0; r < tietSang; r++) {
+      const row = ws.getRow(currentRow + r);
+      weekdays.forEach((day, idx) => {
+        const val = String(row.getCell(4 + idx).value || "").trim();
+        if (!schedule.SÁNG[day]) schedule.SÁNG[day] = [];
+        schedule.SÁNG[day].push(val);
+      });
+    }
+
+    // Sau sáng có 3 dòng "Truy bài", "Ra chơi" → nhảy qua
+    currentRow += tietSang + 3;
+
+    // ==== Đọc buổi CHIỀU (4 tiết) ====
+    for (let r = 0; r < tietChieu; r++) {
+      const row = ws.getRow(currentRow + r);
+      weekdays.forEach((day, idx) => {
+        const val = String(row.getCell(4 + idx).value || "").trim();
+        if (!schedule.CHIỀU[day]) schedule.CHIỀU[day] = [];
+        schedule.CHIỀU[day].push(val);
+      });
+    }
+
+    // ==== Lưu Firestore ====
+    const lopDocRef = doc(db, "TKB_LOP", lopName);
+    await setDoc(lopDocRef, { schedule }, { merge: true });
+
+    //console.log(`✅ Import thành công TKB lớp ${lopName}`);
+
+    offset += blockHeight; // sang block tiếp theo (E7 → E54 → E101 …)
+  }
+};
