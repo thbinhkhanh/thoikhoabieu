@@ -449,20 +449,58 @@ function AppContent() {
         }}
       />
 
+      {/* Thanh menu chính */}
       <AppBar position="fixed" sx={{ background: "#1976d2", height: "50px" }}>
-        <Toolbar sx={{ minHeight: "30px", display: "flex", alignItems: "center", px: 1, mt: -1, mb: -1 }}>
-          <Box component="img" src="/Logo.png" alt="Logo" sx={{ height: "30px", m: -2, cursor: "pointer" }} />
-
-          <Box sx={{ display: "flex", gap: 2, ml: 5 }}>
-            {ribbonTabs.map(tab => (
+        <Toolbar
+          sx={{
+            minHeight: { xs: 30, sm: 50 },  // 👉 mobile 30px, desktop 50px
+            display: "flex",
+            alignItems: "center",
+            px: 1,
+            mt: { xs: 1, sm: 0 },           // 👉 thêm margin-top cho mobile
+          }}
+        >
+          <Box
+            component="img"
+            src="/Logo.png"
+            alt="Logo"
+            sx={{
+              height: "30px",
+              cursor: "pointer",
+              // Desktop: giữ nguyên m: -2
+              ml: { xs: 0.2, sm: -2 },   // 📱 mobile: chỉ lùi nhẹ (0.5), 🖥️ desktop giữ -2
+              mt: { xs: -0.7, sm: -2 },     // 📱 mobile: giảm nhích lên (0), 🖥️ desktop giữ -2
+              mb: { xs: 0, sm: -2 },
+              mr: { xs: 0, sm: -2 },
+            }}
+          />
+          
+          {/* Menu tabs */}
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              ml: 5,
+              overflowX: "auto",
+              whiteSpace: "nowrap",
+              "&::-webkit-scrollbar": { height: 6 },
+            }}
+          >
+            {ribbonTabs.map((tab) => (
               <Button
                 key={tab.label}
-                startIcon={React.cloneElement(tab.icon, { sx: { color: "#fff", fontSize: "1.2rem" } })}
+                startIcon={React.cloneElement(tab.icon, {
+                  sx: { color: "#fff", fontSize: "1.2rem" },
+                })}
                 sx={{
+                  flexShrink: 0,
                   color: "white",
                   textTransform: "none",
                   fontSize: "0.875rem",
-                  borderBottom: activeTab === tab.label ? "3px solid #fff" : "3px solid transparent",
+                  borderBottom:
+                    activeTab === tab.label
+                      ? "3px solid #fff"
+                      : "3px solid transparent",
                 }}
                 onClick={() => handleTabClick(tab)}
               >
@@ -470,108 +508,167 @@ function AppContent() {
               </Button>
             ))}
           </Box>
-
-          <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: { xs: "none", sm: "flex" }, // 👉 ẩn cả cụm này trên mobile
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
             {openFileName && (
               <Typography variant="subtitle2" sx={{ color: "#ffeb3b" }}>
                 📂 {openFileName}
               </Typography>
             )}
+
+            <Typography variant="subtitle2" sx={{ color: "#fff", ml: 2 }}>
+              {schoolYear}
+            </Typography>
           </Box>
 
-          <Typography variant="subtitle2" sx={{ color: "#fff", ml: 2 }}>
-            {schoolYear}
-          </Typography>
 
-          <Button sx={{ color: "white", fontSize: "1.5rem", minWidth: 50, height: "30px" }} onClick={() => setRibbonVisible(!ribbonVisible)}>
+          <Button
+            sx={{
+              color: "white",
+              fontSize: "1.5rem",
+              minWidth: 50,
+              height: "30px",
+            }}
+            onClick={() => setRibbonVisible(!ribbonVisible)}
+          >
             {ribbonVisible ? "▴" : "▾"}
           </Button>
         </Toolbar>
+      </AppBar>
 
-        {ribbonVisible && (
+      {/* Ribbon luôn dưới AppBar */}
+      {ribbonVisible && (
+        <Box
+          sx={{
+            mt: "50px", // 👈 đẩy ribbon xuống dưới AppBar cao 50px
+            bgcolor: "#fff",
+            p: 1,
+            display: "flex",
+            alignItems: "center",
+            borderBottom: "1px solid #ccc",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: (theme) => theme.zIndex.appBar - 1, // dưới AppBar
+          }}
+        >
           <Box
             sx={{
-              bgcolor: "#fff",
-              p: 1,
               display: "flex",
               alignItems: "center",
-              borderBottom: "1px solid #ccc",
+              gap: 1,
+              overflowX: "auto",
+              whiteSpace: "nowrap",
+              "&::-webkit-scrollbar": { height: 6 },
             }}
           >
-            {/* Các nút ribbon */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {ribbonTabs.find(t => t.label === activeTab)?.commands.map((cmd) => (
-                <React.Fragment key={cmd.label}>
-                  {(cmd.label === "GV chủ nhiệm" || cmd.label === "Xếp tự động") && (
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1, borderColor: "#757575", borderRightWidth: 2, opacity: 0.5 }}
-                    />
-                  )}
-
-                  <Button
-                    component={cmd.path ? Link : "button"}
-                    to={cmd.path || undefined}
-                    onClick={() => handleCommandClick(cmd)}
+            {ribbonTabs.find((t) => t.label === activeTab)?.commands.map((cmd) => (
+              <React.Fragment key={cmd.label}>
+                {(cmd.label === "GV chủ nhiệm" || cmd.label === "Xếp tự động") && (
+                  <Divider
+                    orientation="vertical"
+                    flexItem
                     sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      minWidth: 60,
-                      borderRadius: 1,
-                      textTransform: "none",
-                      bgcolor: activeCommand === cmd.label ? "#e0f7fa" : "transparent",
-                      "&:hover": { bgcolor: "#b2ebf2" },
-                      color: ["Lưu", "Lưu...", "Mở file", "Tải về", "In"].includes(cmd.label)
-                        ? "primary.main"
-                        : commandColors[cmd.label] || "#000",
+                      mx: 1,
+                      borderColor: "#757575",
+                      borderRightWidth: 2,
+                      opacity: 0.5,
+                    }}
+                  />
+                )}
+
+                <Button
+                  component={cmd.path ? Link : "button"}
+                  to={cmd.path || undefined}
+                  onClick={() => handleCommandClick(cmd)}
+                  sx={{
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: { xs: "row", sm: "column" },
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: { xs: "auto", sm: 60 },
+                    px: { xs: 1, sm: 0 },
+                    gap: { xs: 0.5, sm: 0 },
+                    borderRadius: 1,
+                    textTransform: "none",
+                    bgcolor:
+                      activeCommand === cmd.label ? "#e0f7fa" : "transparent",
+                    "&:hover": { bgcolor: "#b2ebf2" },
+                    color: ["Lưu", "Lưu...", "Mở file", "Tải về", "In"].includes(
+                      cmd.label
+                    )
+                      ? "primary.main"
+                      : commandColors[cmd.label] || "#000",
+                  }}
+                >
+                  {cmd.icon &&
+                    React.cloneElement(cmd.icon, {
+                      sx: {
+                        fontSize: "1.5rem",
+                        mr: { xs: 0.5, sm: 0 },
+                        color: ["Lưu", "Lưu...", "Mở file", "Tải về", "In"].includes(
+                          cmd.label
+                        )
+                          ? "inherit"
+                          : commandColors[cmd.label] || "#000",
+                      },
+                    })}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: { xs: "0.75rem", sm: "0.8rem" },
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {cmd.icon &&
-                      React.cloneElement(cmd.icon, {
-                        sx: {
-                          fontSize: "1.5rem",
-                          color: ["Lưu","Lưu...","Mở file","Tải về","In"].includes(cmd.label)
-                            ? "inherit"
-                            : commandColors[cmd.label] || "#000",
-                        },
-                      })}
-                    <Typography variant="caption">{cmd.label}</Typography>
-                  </Button>
-                </React.Fragment>
-              ))}
-            </Box>
+                    {cmd.label}
+                  </Typography>
+                </Button>
+              </React.Fragment>
+            ))}
+          </Box>
 
-            {/* 👉 Thanh tiến trình căn giữa giống 📂 openFileName */}
-            {isSaving && (
-              <Box
+          {isSaving && (
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                py: 0.5,
+              }}
+            >
+              <Box sx={{ width: 180, height: 3 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={saveProgress}
+                  sx={{ height: "3px", borderRadius: 1 }}
+                />
+              </Box>
+              <Typography
+                variant="caption"
                 sx={{
-                  flexGrow: 1,
-                  display: "flex",
-                  flexDirection: "column", // để text xuống dưới thanh
-                  alignItems: "center",
-                  justifyContent: "center",
-                  py: 0.5, // padding nhỏ
+                  mt: 0.5,
+                  fontSize: "0.7rem",
+                  color: "#000",
+                  textAlign: "center",
                 }}
               >
-                <Box sx={{ width: 180, height: 3 }}>
-                  <LinearProgress
-                    variant="determinate"
-                    value={saveProgress}
-                    sx={{ height: "3px", borderRadius: 1 }}
-                  />
-                </Box>
-                <Typography
-                  variant="caption"
-                  sx={{ mt: 0.5, fontSize: "0.7rem", color: "#000", textAlign: "center" }}
-                >
-                  Đang lưu... ({saveProgress}%)
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-      </AppBar>
+                Đang lưu... ({saveProgress}%)
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+
 
       {/* ✅ Hộp thoại mở file */}
       <FileOpenDialog
