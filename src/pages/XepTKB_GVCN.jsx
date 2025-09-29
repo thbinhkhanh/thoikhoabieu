@@ -968,17 +968,34 @@ useEffect(() => {
             <TableBody>
               {periodsBySession[session].map((period, idx) => (
                 <TableRow key={period} sx={{ height: 36 }}>
+                  {/* Cột Tiết */}
                   <TableCell
                     align="center"
-                    sx={{ padding: "4px", width: cellWidthTiet }}
+                    sx={{
+                      padding: "4px",
+                      width: cellWidthTiet,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
                   >
                     {period}
                   </TableCell>
+
+                  {/* Các cột ngày */}
                   {days.map((day) => (
                     <TableCell
                       key={day}
                       align="center"
-                      sx={{ padding: "4px", width: cellWidthDay }}
+                      sx={{
+                        padding: "4px",
+                        width: cellWidthDay, // cố định width
+                        minWidth: cellWidthDay,
+                        maxWidth: cellWidthDay,
+                        whiteSpace: "nowrap", // không xuống dòng
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
                     >
                       {renderCell(session, day, idx)}
                     </TableCell>
@@ -986,6 +1003,7 @@ useEffect(() => {
                 </TableRow>
               ))}
             </TableBody>
+
           </Table>
         </TableContainer>
       </Box>
@@ -996,7 +1014,7 @@ useEffect(() => {
 
   return (
   <Box sx={{ px: { xs: 1, sm: 3 }, py: 4, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
-    <Paper elevation={4} sx={{ maxWidth: 750, mx: "auto", p: 3, borderRadius: 3, position: "relative" }}>
+    <Paper elevation={4} sx={{ maxWidth: 800, mx: "auto", p: 3, borderRadius: 3, position: "relative" }}>
       {/* Nút Import Excel */}
         <input
           type="file"

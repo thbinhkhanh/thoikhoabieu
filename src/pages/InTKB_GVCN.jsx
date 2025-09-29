@@ -496,19 +496,46 @@ useEffect(() => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {periodsBySession[session].map((period, idx) => (
-                <TableRow key={period} sx={{ height: 36 }}>
-                  <TableCell align="center" sx={{ padding: "4px" }}>
-                    {removeTHSuffix(period)}
-                  </TableCell>
-                  {days.map(day => (
-                    <TableCell key={day} align="center" sx={{ padding: "4px" }}>
-                      {removeTHSuffix(schedule[session][day]?.[idx])}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
+  {periodsBySession[session].map((period, idx) => (
+    <TableRow key={period} sx={{ height: 36 }}>
+      {/* Cột Tiết */}
+      <TableCell
+        align="center"
+        sx={{
+          padding: "4px",
+          width: { xs: 36, sm: "auto" }, // mobile cố định width 36px, desktop tự động
+          minWidth: { xs: 36, sm: "auto" },
+          maxWidth: { xs: 36, sm: "auto" },
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {removeTHSuffix(period)}
+      </TableCell>
+
+      {/* Các cột ngày */}
+      {days.map(day => (
+        <TableCell
+          key={day}
+          align="center"
+          sx={{
+            padding: "4px",
+            width: { xs: 80, sm: "auto" }, // mobile cố định width 80px, desktop linh hoạt
+            minWidth: { xs: 80, sm: "auto" },
+            maxWidth: { xs: 80, sm: "auto" },
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {removeTHSuffix(schedule[session][day]?.[idx])}
+        </TableCell>
+      ))}
+    </TableRow>
+  ))}
+</TableBody>
+
           </Table>
         </TableContainer>
       </Box>
