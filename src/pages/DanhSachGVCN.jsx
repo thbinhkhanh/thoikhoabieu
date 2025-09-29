@@ -365,7 +365,7 @@ export default function DanhSachGVCN({ setUploadHandler }) {
               gutterBottom
               sx={{ mt: 1 }}
             >
-              DANH SÁCH GIÁO VIÊN CHỦ NHIỆM
+              GIÁO VIÊN CHỦ NHIỆM
             </Typography>
           </Box>
 

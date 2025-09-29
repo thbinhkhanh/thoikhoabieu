@@ -359,7 +359,7 @@ export default function DanhSachGVBM({ setUploadHandler }) {
           </Tooltip>*/}
 
           <Typography variant="h5" align="center" fontWeight="bold" sx={{ color: "#1976d2", mb: 2 }}>
-            DANH SÁCH GIÁO VIÊN BỘ MÔN
+            GIÁO VIÊN BỘ MÔN
           </Typography>
         </Box>
 
