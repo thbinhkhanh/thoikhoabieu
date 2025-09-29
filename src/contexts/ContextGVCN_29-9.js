@@ -73,13 +73,6 @@ export const GVCNProvider = ({ children }) => {
     preloadTKB();
   }, []);
 
-  // 🔹 Hàm reset TKB (không xóa tên GV)
-  const resetGVCN = () => {
-    setAllSchedules({});
-    setContextSchedule({});
-    setContextMonHoc({});
-  };
-
   return (
     <ContextGVCN.Provider
       value={{
@@ -89,9 +82,8 @@ export const GVCNProvider = ({ children }) => {
         setAllSchedules,
         contextSchedule,
         setContextSchedule,
-        contextMonHoc,         
-        setContextMonHoc,
-        resetGVCN,   // 🔹 thêm vào context
+        contextMonHoc,         // ✅ thêm vào context
+        setContextMonHoc       // ✅ thêm vào context
       }}
     >
       {children}

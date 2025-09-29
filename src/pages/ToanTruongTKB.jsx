@@ -506,8 +506,6 @@ const handleRemoveRow = async (session, period, index) => {
   }
 };
 
-
-
 const checkInlineConflict = (session, period, index, newRow) => {
   const conflicts = {};
   const { gvId, class: lop } = newRow;
@@ -640,16 +638,44 @@ const teacherColors = {
   'Trí':    '#ac97d6',
 };
 
-const teacherStats = teachers.map(t => {
-  const total = totalPeriodsPerTeacher[t.id] || 0;
-  const subjects = t.monDay.join(', ');
-  return {
-    id: t.id,
-    name: getTenCuoi(t.name),
-    subjects,
-    total
-  };
-});
+const teacherStats = teachers
+  .filter(t => t.id && tkbAllTeachers[currentDocId]?.[t.id]) // loại bỏ giáo viên lỗi hoặc không có TKB
+  .map(t => {
+    const scheduleByDay = tkbAllTeachers[currentDocId][t.id];
+    console.log(`👨‍🏫 Giáo viên: ${t.id} - ${t.name}`);
+    console.log('📅 scheduleByDay:', scheduleByDay);
+
+    const weeklyData = {};
+    const daysOfWeek = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
+    let total = 0;
+
+    daysOfWeek.forEach(day => {
+      const daySchedule = scheduleByDay?.[day];
+      console.log(`🔍 ${day} của ${t.id}:`, daySchedule);
+
+      if (!daySchedule) {
+        weeklyData[day] = 0;
+        return;
+      }
+
+      const morning = daySchedule.morning || [];
+      const afternoon = daySchedule.afternoon || [];
+      const count = [...morning, ...afternoon].filter(Boolean).length;
+
+      weeklyData[day] = count;
+      total += count;
+    });
+
+    const subjects = t.monDay.join(', ');
+
+    return {
+      id: t.id,
+      name: getTenCuoi(t.name),
+      subjects,
+      total,
+      weeklyBreakdown: weeklyData
+    };
+  });
 
 // Hàm lưu trực tiếp hoặc mở dialog nếu chưa có document
 {/*const handleSave = () => {
@@ -1617,7 +1643,6 @@ return (
       
   </Box>
 );
-
 
 }
 

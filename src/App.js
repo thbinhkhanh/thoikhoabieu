@@ -261,10 +261,19 @@ function AppContent() {
     setActiveCommand(cmd.label);
 
     if (cmd.label === "Mới") {
+      const confirmReset = window.confirm(
+        "⚠️ Bạn có chắc muốn tạo TKB mới?"
+      );
+
+      if (!confirmReset) return; // Người dùng hủy, không làm gì cả
+
       // ✅ Chỉ reset currentDocId TKB, bỏ phần GVBM và TKB khác
       resetSchedule({
         //setCurrentDocId, // chỉ reset docId
       });
+
+      // 🔹 Reset TKB trong GVCN context (không xóa tên GV)
+      gvcndata.resetGVCN();
 
       setOpenFileName("TKB chưa lưu");
 
@@ -422,8 +431,6 @@ function AppContent() {
   }
 };
 
-
-
   // Điều hướng khi mount
   useEffect(() => {
     const tab = ribbonTabs.find(t => t.label === activeTab) || ribbonTabs[0];
@@ -474,7 +481,7 @@ function AppContent() {
               mr: { xs: 0, sm: -2 },
             }}
           />
-          
+
           {/* Menu tabs */}
           <Box
             sx={{
