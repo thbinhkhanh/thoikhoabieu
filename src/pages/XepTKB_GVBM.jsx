@@ -1469,7 +1469,7 @@ return (
         ) : (
           <>
             <Typography variant="h6" color="warning.main" sx={{ mb: 2 }}>
-              Phát hiện trùng tiết:
+              Kiểm tra trùng tiết:
             </Typography>
             <Box sx={{ maxHeight: 400, overflowY: "auto", mb: 2 }}>
               {conflicts.map((c, i) => (
@@ -1486,7 +1486,7 @@ return (
           <Box sx={{ display: "flex", gap: 2 }}>
             {!updateDone && conflicts[0] !== "✅ Không phát hiện xung đột TKB" ? (
               <>
-                <Button
+                {/*<Button
                   variant="contained"
                   color="primary"
                   onClick={handleUpdateConflicts}
@@ -1494,24 +1494,44 @@ return (
                   startIcon={<CheckCircleIcon />}
                 >
                   Đồng ý
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => setShowConflicts(false)}
-                  disabled={updating}
-                  startIcon={<CancelIcon />}
-                >
-                  Hủy
-                </Button>
+                </Button>*/}
+
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0 }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setShowConflicts(false)}
+                    disabled={updating}
+                    sx={{
+                      backgroundColor: '#f57c00',   // màu cam
+                      color: 'white',
+                      textTransform: 'none',
+                      px: 2,                        // padding ngang
+                      py: 0.5,                      // padding dọc
+                      fontSize: '0.8rem',           // cỡ chữ nhỏ hơn
+                      '&:hover': { backgroundColor: '#ef6c00' } // màu cam đậm khi hover
+                    }}
+                  >
+                    Đóng
+                  </Button>
+                </Box>
+
               </>
             ) : (
               <Button
-                variant="outlined"
-                color="secondary"
+                variant="contained"
+                size="small"
                 onClick={() => setShowConflicts(false)}
                 disabled={updating}
-                startIcon={<CloseIcon />}
+                sx={{
+                  backgroundColor: '#f57c00',   // màu cam
+                  color: 'white',
+                  textTransform: 'none',
+                  px: 2,                        // padding ngang
+                  py: 0.5,                      // padding dọc
+                  fontSize: '0.8rem',           // cỡ chữ nhỏ hơn
+                  '&:hover': { backgroundColor: '#ef6c00' } // màu cam đậm khi hover
+                }}
               >
                 Đóng
               </Button>

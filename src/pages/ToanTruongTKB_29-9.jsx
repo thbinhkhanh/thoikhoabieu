@@ -1114,11 +1114,11 @@ return (
   <Box sx={{ mt: 2, p: 2, backgroundColor: "#e3f2fd", minHeight: "100vh" }}>
     <Card
       sx={{
-        width: 1300, // giữ nguyên kích thước desktop
-        mx: "auto",
         p: 3,
         borderRadius: 3,
         boxShadow: 5,
+        maxWidth: "1300px",
+        mx: "auto", // căn giữa card
       }}
     >
       {/* ✅ Cụm icon góc trên/trái */}

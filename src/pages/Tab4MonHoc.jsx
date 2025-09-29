@@ -142,85 +142,125 @@ export default function Tab4MonHoc() {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold" }}>STT</TableCell>
-                  <TableCell align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold" }}>Tên môn học</TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      backgroundColor: "#1976d2",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    STT
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      backgroundColor: "#1976d2",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    MÔN HỌC
+                  </TableCell>
                   {COLS.map(c => (
-                    <TableCell key={c.key} align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold" }}>
-                      {`LỚP ${c.key.slice(-1)}`} 
+                    <TableCell
+                      key={c.key}
+                      align="center"
+                      sx={{
+                        backgroundColor: "#1976d2",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {`LỚP ${c.key.slice(-1)}`}
                     </TableCell>
                   ))}
-                  <TableCell align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold" }}>Điều chỉnh</TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      backgroundColor: "#1976d2",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ĐIỀU CHỈNH
+                  </TableCell>
                 </TableRow>
               </TableHead>
+
               <TableBody>
-  {Object.entries(monHoc).map(([mon, data], idx) => (
-    <TableRow
-      key={mon}
-      onClick={() => {
-        if (selectedMon !== mon) {
-          setSelectedMon(mon);
-          setIsEditing(false);
-          setNewMon("");
-        }
-      }}
-      sx={{
-        backgroundColor: selectedMon === mon ? "#e0e0e0" : "inherit",
-        "&:hover": { backgroundColor: "#f5f5f5", cursor: "pointer" },
-        transition: "background-color 0.2s ease"
-      }}
-    >
-      <TableCell align="center">{idx + 1}</TableCell>
+                {Object.entries(monHoc).map(([mon, data], idx) => (
+                  <TableRow
+                    key={mon}
+                    onClick={() => {
+                      if (selectedMon !== mon) {
+                        setSelectedMon(mon);
+                        setIsEditing(false);
+                        setNewMon("");
+                      }
+                    }}
+                    sx={{
+                      backgroundColor: selectedMon === mon ? "#e0e0e0" : "inherit",
+                      "&:hover": { backgroundColor: "#f5f5f5", cursor: "pointer" },
+                      transition: "background-color 0.2s ease"
+                    }}
+                  >
+                    <TableCell align="center">{idx + 1}</TableCell>
 
-      {/* ✅ Tên môn học: luôn 1 dòng + cắt nếu dài */}
-      <TableCell
-        sx={{
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          maxWidth: 200, // tuỳ chỉnh
-        }}
-      >
-        <Tooltip title={mon}>
-          <span>{mon}</span>
-        </Tooltip>
-      </TableCell>
+                    {/* ✅ Tên môn học: luôn 1 dòng + cắt nếu dài */}
+                    <TableCell
+                      sx={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: 200, // tuỳ chỉnh
+                      }}
+                    >
+                      <Tooltip title={mon}>
+                        <span>{mon}</span>
+                      </Tooltip>
+                    </TableCell>
 
-      {COLS.map(({ key }) => (
-        <TableCell key={key} align="center">
-          <Checkbox
-            checked={data[key] || false}
-            size="small"
-            onChange={e => saveData(mon, key, e.target.checked)}
-          />
-        </TableCell>
-      ))}
-      <TableCell align="center">
-        {selectedMon === mon && (
-          <Stack direction="row" spacing={1} justifyContent="center">
-            <Tooltip title="Chỉnh sửa">
-              <IconButton
-                color="primary"
-                size="small"
-                onClick={() => { setIsEditing(true); setNewMon(mon); }}
-              >
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Xóa">
-              <IconButton
-                color="error"
-                size="small"
-                onClick={() => handleDeleteMon(mon)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        )}
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
+                    {COLS.map(({ key }) => (
+                      <TableCell key={key} align="center">
+                        <Checkbox
+                          checked={data[key] || false}
+                          size="small"
+                          onChange={e => saveData(mon, key, e.target.checked)}
+                        />
+                      </TableCell>
+                    ))}
+                    <TableCell align="center">
+                      {selectedMon === mon && (
+                        <Stack direction="row" spacing={1} justifyContent="center">
+                          <Tooltip title="Chỉnh sửa">
+                            <IconButton
+                              color="primary"
+                              size="small"
+                              onClick={() => { setIsEditing(true); setNewMon(mon); }}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Xóa">
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => handleDeleteMon(mon)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
 
             </Table>
           </TableContainer>

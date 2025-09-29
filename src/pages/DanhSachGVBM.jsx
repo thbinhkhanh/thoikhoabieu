@@ -530,13 +530,22 @@ export default function DanhSachGVBM({ setUploadHandler }) {
         </TableContainer>
 
         {/* Form thêm/sửa */}
-        <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",                  // cho phép xuống dòng trên mobile
+            gap: 1.5,
+            mt: { xs: 1.5, sm: 3 },            // khoảng cách trên mobile khác desktop
+            justifyContent: { xs: "center", sm: "flex-start" }, // mobile căn giữa, desktop giữ như trước
+            alignItems: "center",
+          }}
+        >
           <TextField
             label="Họ và Tên"
             value={newRow.hoTen}
             onChange={(e) => setNewRow({ ...newRow, hoTen: e.target.value })}
             size="small"
-            sx={{ flex: 1.5 }}
+            sx={{ flex: { xs: "1 1 100%", sm: 1.5 } }} // mobile full width, desktop 1.5 flex
           />
           <Autocomplete
             multiple
@@ -547,7 +556,7 @@ export default function DanhSachGVBM({ setUploadHandler }) {
             filterSelectedOptions
             disableCloseOnSelect
             size="small"
-            sx={{ width: 243 }}
+            sx={{ width: { xs: "100%", sm: 243 } }} // mobile full, desktop cố định
             renderInput={(params) => <TextField {...params} label="Môn học" inputRef={monInputRef} />}
           />
 
@@ -574,6 +583,7 @@ export default function DanhSachGVBM({ setUploadHandler }) {
             </Button>
           )}
         </Box>
+
       </CardContent>
     </Card>
   </Box>

@@ -491,33 +491,78 @@ export default function DanhSachGVCN({ setUploadHandler }) {
           </TableContainer>
 
           {/* Form thêm/sửa */}
-          <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap", // cho phép xuống dòng trên mobile
+              gap: 1.5,
+              mt: 3,
+              justifyContent: { xs: "center", sm: "flex-start" }, // mobile căn giữa, desktop giữ nguyên
+              alignItems: "center",
+            }}
+          >
+            {/* Ô Họ và Tên */}
             <TextField
               label="Họ và Tên"
               value={newRow.hoTen}
               onChange={(e) => setNewRow({ ...newRow, hoTen: e.target.value })}
               size="small"
-              sx={{ flex: 1 }}
+              sx={{ flex: { xs: "1 1 100%", sm: 1 }, minWidth: { xs: "100%", sm: "auto" } }}
             />
+
+            {/* Ô Lớp */}
             <Autocomplete
               freeSolo
               options={danhSachLop}
               value={newRow.lop}
-              onChange={(event, newValue) => { setNewRow({ ...newRow, lop: newValue || "" }); }}
-              onInputChange={(event, newInputValue) => { setNewRow({ ...newRow, lop: newInputValue }); }}
+              onChange={(event, newValue) => {
+                setNewRow({ ...newRow, lop: newValue || "" });
+              }}
+              onInputChange={(event, newInputValue) => {
+                setNewRow({ ...newRow, lop: newInputValue });
+              }}
               size="small"
-              sx={{ width: 120 }}
+              sx={{ width: { xs: "100%", sm: 120 } }}
               renderInput={(params) => <TextField {...params} label="Lớp" />}
             />
-            {isEditing ? (
-              <>
-                <Button variant="outlined" color="warning" onClick={handleUpdateRow}>Sửa</Button>
-                <Button variant="text" color="inherit" onClick={() => { setIsEditing(false); setEditingIndex(null); setNewRow({ hoTen: "", lop: "" }); setSelectedRow(null); }}>Hủy</Button>
-              </>
-            ) : (
-              <Button variant="contained" onClick={handleAddRow}>Thêm</Button>
-            )}
+
+            {/* Các nút */}
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexWrap: "wrap",
+                justifyContent: { xs: "center", sm: "flex-start" },
+                width: { xs: "100%", sm: "auto" }, // mobile full width
+                mt: { xs: 1, sm: 0 },
+              }}
+            >
+              {isEditing ? (
+                <>
+                  <Button variant="outlined" color="warning" onClick={handleUpdateRow}>
+                    Sửa
+                  </Button>
+                  <Button
+                    variant="text"
+                    color="inherit"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingIndex(null);
+                      setNewRow({ hoTen: "", lop: "" });
+                      setSelectedRow(null);
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                </>
+              ) : (
+                <Button variant="contained" onClick={handleAddRow}>
+                  Thêm
+                </Button>
+              )}
+            </Box>
           </Box>
+
 
         </CardContent>
       </Card>

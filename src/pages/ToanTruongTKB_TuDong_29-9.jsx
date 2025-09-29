@@ -1691,14 +1691,14 @@ return (
   <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd", p: 2, mt: 2 }}>
     {/* Card lớn chứa tất cả */}
     <Paper
-    sx={{
-      p: 3,
-      borderRadius: 3,
-      boxShadow: 4,
-      width: 1300,  // giữ nguyên kích thước desktop
-      mx: "auto",
-    }}
-  >
+      sx={{
+        p: 3,
+        borderRadius: 3,
+        boxShadow: 4,
+        maxWidth: "1300px",
+        mx: "auto",
+      }}
+    >
       {loadingFiles && (
         <Box sx={{ width: "50%", maxWidth: 120, mt: 1, mb: 1, mx: "auto" }}>
           <LinearProgress
