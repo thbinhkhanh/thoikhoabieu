@@ -528,19 +528,31 @@ const handleToExcel = () => {
           </Typography>
         </Box>
 
-
-        <Grid container alignItems="center" sx={{ mt: 4, mb: 4 }} justifyContent="space-between">
-          <Box sx={{ display: "flex", gap: 2 }}>
-            {/* Ô GV bộ môn */}
+        <Grid
+          container
+          alignItems="center"
+          sx={{
+            mt: 4,
+            mb: 4,
+            flexDirection: { xs: "column", sm: "row" }, // mobile cột, desktop hàng
+          }}
+        >
+          {/* Box chứa 2 ô GV và Môn học */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 2,
+              width: { xs: "100%", sm: "auto" },
+            }}
+          >
             <TextField
               select
               label="GV bộ môn"
               value={selectedGV}
               size="small"
               onChange={(e) => setSelectedGV(e.target.value)}
-              sx={{
-                width: { xs: 250, sm: 270 }, // 👉 Mobile 250px, Desktop 270px
-              }}
+              sx={{ width: { xs: "100%", sm: 270 } }}
             >
               {teachersList.map((hoTen) => (
                 <MenuItem key={hoTen} value={hoTen}>
@@ -549,34 +561,30 @@ const handleToExcel = () => {
               ))}
             </TextField>
 
-            {/* Ô Môn học */}
             <TextField
               label="Môn học"
               value={selectedMon}
               size="small"
               InputProps={{ readOnly: true }}
-              sx={{
-                width: { xs: 130, sm: 170 }, // 👉 Mobile 120px, Desktop 170px
-              }}
+              sx={{ width: { xs: "100%", sm: 170 } }}
             />
           </Box>
 
-          <Typography
-            variant="body1"
+          {/* Tổng số tiết */}
+          <Box
             sx={{
-              minWidth: 120,
-              textAlign: "right",
-              color: "text.primary",
-              mt: { xs: 2, sm: 0 }, // 👉 Mobile có margin-top, desktop giữ nguyên
+              mt: { xs: 1, sm: 0 },
+              mb: { xs: -3, sm: 0 },
+              ml: { xs: 0, sm: "auto" }, // desktop đẩy sang phải
+              textAlign: "right",         // luôn căn phải
             }}
           >
-            Tổng số tiết:{" "}
-            <Box component="span" sx={{ fontWeight: "bold" }}>
-              {tinhTongTiet()}
-            </Box>
-          </Typography>
-
+            <Typography variant="body1" sx={{ color: "text.primary", fontWeight: "bold" }}>
+              Tổng số tiết: {tinhTongTiet()}
+            </Typography>
+          </Box>
         </Grid>
+
 
         {renderScheduleTable("SÁNG")}
         {renderScheduleTable("CHIỀU")}

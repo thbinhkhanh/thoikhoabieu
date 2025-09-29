@@ -554,14 +554,25 @@ useEffect(() => {
           </Typography>
         </Box>
 
-        <Grid container alignItems="center" sx={{ mt: 4, mb: 4 }} justifyContent="flex-start" spacing={2}>
-          <Box sx={{ display: "flex", gap: 2 }}>
+        <Grid
+          container
+          sx={{
+            mt: 4,
+            mb: 4,
+            flexDirection: { xs: "row", sm: "row" }, // Mobile: cùng hàng
+            alignItems: { xs: "center", sm: "center" },
+            gap: 2, // khoảng cách giữa các item
+          }}
+        >
+          {/* Ô Khối */}
+          <Grid item sx={{ width: { xs: "47%", sm: "auto" } }}>
             <TextField
               select
               label="Khối lớp"
               value={khoi}
               size="small"
               onChange={handleKhoiChange}
+              sx={{ width: "100%" }}
             >
               {Object.keys(khoiLopData).map(k => (
                 <MenuItem key={k} value={k}>
@@ -569,13 +580,17 @@ useEffect(() => {
                 </MenuItem>
               ))}
             </TextField>
+          </Grid>
 
+          {/* Ô Lớp (cùng hàng với Khối) */}
+          <Grid item sx={{ width: { xs: "47%", sm: "auto" } }}>
             <TextField
               select
               label="Lớp"
               value={lop}
               size="small"
               onChange={e => setLop(e.target.value)}
+              sx={{ width: "100%" }}
             >
               {khoiLopData[khoi].map(l => (
                 <MenuItem key={l} value={l}>
@@ -583,22 +598,22 @@ useEffect(() => {
                 </MenuItem>
               ))}
             </TextField>
+          </Grid>
 
+          {/* Ô GV chủ nhiệm */}
+          <Grid item sx={{ width: { xs: "100%", sm: 250 }, mt: { xs: 1, sm: 0 } }}>
             <TextField
-  label="GV chủ nhiệm"
-  value={gvChuNhiem}
-  size="small"
-  InputProps={{ readOnly: true }}
-  sx={{
-    width: { xs: "fit-content", sm: 250 }, // mobile tự co giãn, desktop cố định 250px
-    minWidth: { xs: 120, sm: 250 },        // mobile tối thiểu 120px
-    textAlign: "center",
-  }}
-/>
-
-          </Box>
+              label="GV chủ nhiệm"
+              value={gvChuNhiem}
+              size="small"
+              InputProps={{ readOnly: true }}
+              sx={{
+                width: "100%", // mobile full width, desktop cố định 250px
+                textAlign: "center",
+              }}
+            />
+          </Grid>
         </Grid>
-
 
         {renderScheduleTable("SÁNG")}
         {renderScheduleTable("CHIỀU")}

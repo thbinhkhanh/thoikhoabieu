@@ -1029,54 +1029,65 @@ useEffect(() => {
           XẾP THỜI KHÓA BIỂU GVCN
         </Typography>
 
-
-      <Grid container alignItems="center" spacing={2} sx={{ mt: 4, mb: 2 }}>
-        {/* Khối lớp + Lớp */}
-        <Grid item>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              select
-              label="Khối lớp"
-              value={khoi}
-              size="small"
-              onChange={handleKhoiChange}
-            >
-              {Object.keys(khoiLopData).map(k => (
-                <MenuItem key={k} value={k}>Khối {k}</MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              select
-              label="Lớp"
-              value={lop}
-              size="small"
-              onChange={(e) => setLop(e.target.value)}
-            >
-              {khoiLopData[khoi].map(l => (
-                <MenuItem key={l} value={l}>{l}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
+      <Grid
+        container
+        sx={{
+          mt: 4,
+          mb: 4,
+          flexDirection: { xs: "row", sm: "row" }, // Mobile: cùng hàng
+          alignItems: { xs: "center", sm: "center" },
+          gap: 2, // khoảng cách giữa các item
+        }}
+      >
+        {/* Ô Khối */}
+        <Grid item sx={{ width: { xs: "47%", sm: "auto" } }}>
+          <TextField
+            select
+            label="Khối lớp"
+            value={khoi}
+            size="small"
+            onChange={handleKhoiChange}
+            sx={{ width: "100%" }}
+          >
+            {Object.keys(khoiLopData).map(k => (
+              <MenuItem key={k} value={k}>
+                Khối {k}
+              </MenuItem>
+            ))}
+          </TextField>
         </Grid>
 
-        {/* GV chủ nhiệm */}
-        <Grid item>
+        {/* Ô Lớp (cùng hàng với Khối) */}
+        <Grid item sx={{ width: { xs: "47%", sm: "auto" } }}>
+          <TextField
+            select
+            label="Lớp"
+            value={lop}
+            size="small"
+            onChange={e => setLop(e.target.value)}
+            sx={{ width: "100%" }}
+          >
+            {khoiLopData[khoi].map(l => (
+              <MenuItem key={l} value={l}>
+                {l}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+
+        {/* Ô GV chủ nhiệm */}
+        <Grid item sx={{ width: { xs: "100%", sm: 250 }, mt: { xs: 1, sm: 0 } }}>
           <TextField
             label="GV chủ nhiệm"
             value={gvChuNhiem}
             size="small"
             InputProps={{ readOnly: true }}
-            sx={{ minWidth: 250, textAlign: "center" }}
+            sx={{
+              width: "100%", // mobile full width, desktop cố định 250px
+              textAlign: "center",
+            }}
           />
         </Grid>
-
-        {/* Tổng số tiết */}
-        {/*<Grid item sx={{ ml: "auto" }}>
-          <Typography variant="body1">
-            Tổng số tiết: <strong>{getTotalSelectedPeriods()}</strong>
-          </Typography>
-        </Grid>*/}
       </Grid>
 
       {renderScheduleTable("SÁNG")}

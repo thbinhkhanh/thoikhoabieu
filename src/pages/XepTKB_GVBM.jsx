@@ -1441,7 +1441,7 @@ return (
           </TextField>
         </Box>
       </Box>
-      <Typography variant="body1" sx={{ minWidth: 120, textAlign: "right" }}>
+      <Typography variant="body1" sx={{ minWidth: 120, textAlign: "right", mt: 1 }}>
         Tổng số tiết: <strong>{tinhTongTiet()}</strong>
       </Typography>
     </Grid>
