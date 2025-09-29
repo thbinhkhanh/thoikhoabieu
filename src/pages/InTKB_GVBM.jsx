@@ -531,13 +531,16 @@ const handleToExcel = () => {
 
         <Grid container alignItems="center" sx={{ mt: 4, mb: 4 }} justifyContent="space-between">
           <Box sx={{ display: "flex", gap: 2 }}>
+            {/* Ô GV bộ môn */}
             <TextField
               select
               label="GV bộ môn"
               value={selectedGV}
               size="small"
               onChange={(e) => setSelectedGV(e.target.value)}
-              sx={{ width: 270 }}
+              sx={{
+                width: { xs: 250, sm: 270 }, // 👉 Mobile 250px, Desktop 270px
+              }}
             >
               {teachersList.map((hoTen) => (
                 <MenuItem key={hoTen} value={hoTen}>
@@ -546,18 +549,33 @@ const handleToExcel = () => {
               ))}
             </TextField>
 
+            {/* Ô Môn học */}
             <TextField
               label="Môn học"
               value={selectedMon}
               size="small"
               InputProps={{ readOnly: true }}
-              sx={{ width: 170 }}
+              sx={{
+                width: { xs: 130, sm: 170 }, // 👉 Mobile 120px, Desktop 170px
+              }}
             />
           </Box>
 
-          <Typography variant="body1" sx={{ minWidth: 120, textAlign: "right", color: "text.primary" }}>
-            Tổng số tiết: <Box component="span" sx={{ fontWeight: "bold" }}>{tinhTongTiet()}</Box>
+          <Typography
+            variant="body1"
+            sx={{
+              minWidth: 120,
+              textAlign: "right",
+              color: "text.primary",
+              mt: { xs: 2, sm: 0 }, // 👉 Mobile có margin-top, desktop giữ nguyên
+            }}
+          >
+            Tổng số tiết:{" "}
+            <Box component="span" sx={{ fontWeight: "bold" }}>
+              {tinhTongTiet()}
+            </Box>
           </Typography>
+
         </Grid>
 
         {renderScheduleTable("SÁNG")}

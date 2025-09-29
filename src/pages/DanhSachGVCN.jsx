@@ -409,10 +409,29 @@ export default function DanhSachGVCN({ setUploadHandler }) {
               </TableHead>
               <TableBody>
                 {rows.map((row, idx) => (
-                  <TableRow key={idx} sx={{ "&:hover .action-icon": { opacity: 1 }, "&:hover": { backgroundColor: "#f5f5f5" } }}>
+                  <TableRow
+                    key={idx}
+                    sx={{
+                      "&:hover .action-icon": { opacity: 1 },
+                      "&:hover": { backgroundColor: "#f5f5f5" },
+                    }}
+                  >
                     <TableCell align="center">{row.stt || idx + 1}</TableCell>
-                    <TableCell>{row.hoTen}</TableCell>
+
+                    {/* 👉 Họ và tên hiển thị trên 1 dòng, phần thừa "..." */}
+                    <TableCell
+                      sx={{
+                        maxWidth: "180px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {row.hoTen}
+                    </TableCell>
+
                     <TableCell align="center">{row.lop}</TableCell>
+
                     <TableCell align="center">
                       <Stack direction="row" spacing={1} justifyContent="center">
                         <Tooltip title="Chỉnh sửa">
@@ -420,7 +439,14 @@ export default function DanhSachGVCN({ setUploadHandler }) {
                             size="small"
                             onClick={() => handleEditRow(idx)}
                             className="action-icon"
-                            sx={{ opacity: 0, color: "#1976d2", "&:active": { bgcolor: "rgba(25, 118, 210, 0.2)", transform: "scale(1.1)" } }}
+                            sx={{
+                              opacity: 0,
+                              color: "#1976d2",
+                              "&:active": {
+                                bgcolor: "rgba(25, 118, 210, 0.2)",
+                                transform: "scale(1.1)",
+                              },
+                            }}
                           >
                             <EditIcon />
                           </IconButton>
@@ -430,7 +456,14 @@ export default function DanhSachGVCN({ setUploadHandler }) {
                             size="small"
                             onClick={() => handleDeleteRow(idx)}
                             className="action-icon"
-                            sx={{ opacity: 0, color: "#d32f2f", "&:active": { bgcolor: "rgba(211, 47, 47, 0.2)", transform: "scale(1.1)" } }}
+                            sx={{
+                              opacity: 0,
+                              color: "#d32f2f",
+                              "&:active": {
+                                bgcolor: "rgba(211, 47, 47, 0.2)",
+                                transform: "scale(1.1)",
+                              },
+                            }}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -440,6 +473,7 @@ export default function DanhSachGVCN({ setUploadHandler }) {
                   </TableRow>
                 ))}
               </TableBody>
+
             </Table>
           </TableContainer>
 

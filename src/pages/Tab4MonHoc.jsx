@@ -153,46 +153,75 @@ export default function Tab4MonHoc() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Object.entries(monHoc).map(([mon, data], idx) => (
-                  <TableRow
-                    key={mon}
-                    onClick={() => { if (selectedMon !== mon) { setSelectedMon(mon); setIsEditing(false); setNewMon(""); } }}
-                    sx={{
-                      backgroundColor: selectedMon === mon ? "#e0e0e0" : "inherit",
-                      "&:hover": { backgroundColor: "#f5f5f5", cursor: "pointer" },
-                      transition: "background-color 0.2s ease"
-                    }}
-                  >
-                    <TableCell align="center">{idx + 1}</TableCell>
-                    <TableCell>{mon}</TableCell>
-                    {COLS.map(({ key }) => (
-                      <TableCell key={key} align="center">
-                        <Checkbox
-                          checked={data[key] || false}
-                          size="small"
-                          onChange={e => saveData(mon, key, e.target.checked)}
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell align="center">
-                      {selectedMon === mon && (
-                        <Stack direction="row" spacing={1} justifyContent="center">
-                          <Tooltip title="Chỉnh sửa">
-                            <IconButton color="primary" size="small" onClick={() => { setIsEditing(true); setNewMon(mon); }}>
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Xóa">
-                            <IconButton color="error" size="small" onClick={() => handleDeleteMon(mon)}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+  {Object.entries(monHoc).map(([mon, data], idx) => (
+    <TableRow
+      key={mon}
+      onClick={() => {
+        if (selectedMon !== mon) {
+          setSelectedMon(mon);
+          setIsEditing(false);
+          setNewMon("");
+        }
+      }}
+      sx={{
+        backgroundColor: selectedMon === mon ? "#e0e0e0" : "inherit",
+        "&:hover": { backgroundColor: "#f5f5f5", cursor: "pointer" },
+        transition: "background-color 0.2s ease"
+      }}
+    >
+      <TableCell align="center">{idx + 1}</TableCell>
+
+      {/* ✅ Tên môn học: luôn 1 dòng + cắt nếu dài */}
+      <TableCell
+        sx={{
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: 200, // tuỳ chỉnh
+        }}
+      >
+        <Tooltip title={mon}>
+          <span>{mon}</span>
+        </Tooltip>
+      </TableCell>
+
+      {COLS.map(({ key }) => (
+        <TableCell key={key} align="center">
+          <Checkbox
+            checked={data[key] || false}
+            size="small"
+            onChange={e => saveData(mon, key, e.target.checked)}
+          />
+        </TableCell>
+      ))}
+      <TableCell align="center">
+        {selectedMon === mon && (
+          <Stack direction="row" spacing={1} justifyContent="center">
+            <Tooltip title="Chỉnh sửa">
+              <IconButton
+                color="primary"
+                size="small"
+                onClick={() => { setIsEditing(true); setNewMon(mon); }}
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Xóa">
+              <IconButton
+                color="error"
+                size="small"
+                onClick={() => handleDeleteMon(mon)}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        )}
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
             </Table>
           </TableContainer>
 

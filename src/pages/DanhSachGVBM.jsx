@@ -429,10 +429,30 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                   }}
                 >
                   <TableCell align="center">{row.stt}</TableCell>
-                  <TableCell>{row.hoTen}</TableCell>
-                  <TableCell sx={{ maxWidth: "200px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+
+                  {/* 👉 Họ và tên luôn 1 dòng */}
+                  <TableCell
+                    sx={{
+                      maxWidth: "180px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {row.hoTen}
+                  </TableCell>
+
+                  <TableCell
+                    sx={{
+                      maxWidth: "200px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {(row.monDay || []).join(", ")}
                   </TableCell>
+
                   <TableCell align="center">
                     <Tooltip title="Phân công lớp">
                       <IconButton
@@ -440,13 +460,17 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                         onClick={() => handleAssignClasses(row)}
                         sx={{
                           color: "#1976d2",
-                          "&:active": { bgcolor: "rgba(25, 118, 210, 0.2)", transform: "scale(1.1)" },
+                          "&:active": {
+                            bgcolor: "rgba(25, 118, 210, 0.2)",
+                            transform: "scale(1.1)",
+                          },
                         }}
                       >
                         <AssignmentIndIcon />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
+
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center">
                       <Tooltip title="Chỉnh sửa">
@@ -454,7 +478,14 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                           size="small"
                           onClick={() => handleEditRow(idx)}
                           className="action-icon"
-                          sx={{ opacity: 0, color: "#1976d2", "&:active": { bgcolor: "rgba(25, 118, 210, 0.2)", transform: "scale(1.1)" } }}
+                          sx={{
+                            opacity: 0,
+                            color: "#1976d2",
+                            "&:active": {
+                              bgcolor: "rgba(25, 118, 210, 0.2)",
+                              transform: "scale(1.1)",
+                            },
+                          }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -464,7 +495,14 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                           size="small"
                           onClick={() => handleDeleteRow(row.gvbmId)}
                           className="action-icon"
-                          sx={{ opacity: 0, color: "#d32f2f", "&:active": { bgcolor: "rgba(211, 47, 47, 0.2)", transform: "scale(1.1)" } }}
+                          sx={{
+                            opacity: 0,
+                            color: "#d32f2f",
+                            "&:active": {
+                              bgcolor: "rgba(211, 47, 47, 0.2)",
+                              transform: "scale(1.1)",
+                            },
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -474,6 +512,7 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                 </TableRow>
               ))}
             </TableBody>
+
           </Table>
         </TableContainer>
 

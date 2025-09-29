@@ -585,12 +585,17 @@ useEffect(() => {
             </TextField>
 
             <TextField
-              label="GV chủ nhiệm"
-              value={gvChuNhiem}
-              size="small"
-              InputProps={{ readOnly: true }}
-              sx={{ minWidth: 250, textAlign: "center" }}
-            />
+  label="GV chủ nhiệm"
+  value={gvChuNhiem}
+  size="small"
+  InputProps={{ readOnly: true }}
+  sx={{
+    width: { xs: "fit-content", sm: 250 }, // mobile tự co giãn, desktop cố định 250px
+    minWidth: { xs: 120, sm: 250 },        // mobile tối thiểu 120px
+    textAlign: "center",
+  }}
+/>
+
           </Box>
         </Grid>
 
