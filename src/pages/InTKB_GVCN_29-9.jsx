@@ -131,6 +131,7 @@ export default function InTKB_GVCN({ setPrintHandler, setExportHandler }) {
 
   const fetchScheduleForLop = async (lopName) => {
   try {
+    // --- 1. Nếu currentDocId chưa có → chỉ set schedule rỗng
     if (!currentDocId) {
       const emptySchedule = {
         SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.SÁNG.length).fill("") }), {}),
@@ -140,20 +141,21 @@ export default function InTKB_GVCN({ setPrintHandler, setExportHandler }) {
       return;
     }
 
-    let baseSchedule;
+    let finalSchedule;
 
-    // --- 1. Nếu lớp đã có trong contextSchedule → dùng luôn
+    // --- 2. Nếu lớp đã có trong contextSchedule → dùng luôn
     if (contextSchedule?.[lopName]) {
-      baseSchedule = contextSchedule[lopName];
+      finalSchedule = contextSchedule[lopName];
     } else {
-      // --- 2. Lấy từ Firestore (TKB_GVCN)
+      // --- 3. Lớp chưa có trong context → lấy từ TKB_GVCN/file đang mở
       const docRef = doc(db, "TKB_GVCN", currentDocId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const scheduleData = data.tkb || data;
+        const scheduleData = data.tkb || data; // nếu file không có field 'tkb', dùng toàn bộ document
 
+        // Chuyển Map → Object nếu cần
         const scheduleObj = { SÁNG: {}, CHIỀU: {} };
         ['SÁNG', 'CHIỀU'].forEach(session => {
           const sessionMap = scheduleData[lopName]?.[session];
@@ -164,21 +166,19 @@ export default function InTKB_GVCN({ setPrintHandler, setExportHandler }) {
           }
         });
 
-        baseSchedule = scheduleObj;
+        finalSchedule = scheduleObj;
 
         // --- Cập nhật contextSchedule để lần sau lấy nhanh
         setContextSchedule(prev => ({ ...prev, [lopName]: scheduleObj }));
       } else {
         console.warn(`⚠️ File TKB_GVCN "${currentDocId}" không tồn tại hoặc không có lớp "${lopName}"`);
-        baseSchedule = {
+        // fallback schedule rỗng
+        finalSchedule = {
           SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.SÁNG.length).fill("") }), {}),
           CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.CHIỀU.length).fill("") }), {})
         };
       }
     }
-
-    // --- 3. Merge thêm GVBM từ tkbAllTeachers
-    const finalSchedule = getGVBMFromContext(baseSchedule, lopName, currentDocId, tkbAllTeachers);
 
     // --- 4. Cập nhật state để render UI
     setSchedule(finalSchedule);
@@ -186,6 +186,7 @@ export default function InTKB_GVCN({ setPrintHandler, setExportHandler }) {
   } catch (error) {
     console.error(`[Error] Lỗi khi lấy TKB lớp ${lopName}:`, error);
 
+    // fallback schedule rỗng
     const fallbackSchedule = {
       SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.SÁNG.length).fill("") }), {}),
       CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.CHIỀU.length).fill("") }), {})
@@ -290,46 +291,46 @@ useEffect(() => {
   };
 
   const handlePrint = async () => {
-    try {
-      const isClassName = (s) => /^\d+\.\d+$/.test(String(s || "").trim());
+  try {
+    const isClassName = (s) => /^\d+\.\d+$/.test(String(s || "").trim());
 
-      const gvList = (contextRows || [])
-        .filter(r => isClassName(r.lop))
-        .map(gvData => {
-          const lopName = String(gvData.lop || "").trim();
+    const gvList = (contextRows || [])
+      .filter(r => isClassName(r.lop))
+      .map(gvData => {
+        const lopName = String(gvData.lop || "").trim();
 
-          // ✅ Lấy schedule từ contextSchedule
-          let finalSchedule = contextSchedule?.[lopName] || {
-            SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.SÁNG.length).fill("") }), {}),
-            CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.CHIỀU.length).fill("") }), {}),
-          };
+        // ✅ Lấy schedule từ contextSchedule
+        let finalSchedule = contextSchedule?.[lopName] || {
+          SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.SÁNG.length).fill("") }), {}),
+          CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(periodsBySession.CHIỀU.length).fill("") }), {}),
+        };
 
-          // ✅ Merge GVBM nếu có
-          if (currentDocId && tkbAllTeachers?.[currentDocId]) {
-            finalSchedule = getGVBMFromContext(finalSchedule, lopName, currentDocId, tkbAllTeachers);
-          }
+        // ✅ Merge GVBM nếu có
+        if (currentDocId && tkbAllTeachers?.[currentDocId]) {
+          finalSchedule = getGVBMFromContext(finalSchedule, lopName, currentDocId, tkbAllTeachers);
+        }
 
-          const tkbForPrint = {};
-          days.forEach(day => {
-            tkbForPrint[day] = {
-              SÁNG: finalSchedule.SÁNG[day].map(s => ({ subject: s || "" })),
-              CHIỀU: finalSchedule.CHIỀU[day].map(s => ({ subject: s || "" })),
-            };
-          });
-
-          return {
-            name: gvData.hoTen,
-            tenLop: lopName,
-            tkbData: tkbForPrint,
+        const tkbForPrint = {};
+        days.forEach(day => {
+          tkbForPrint[day] = {
+            SÁNG: finalSchedule.SÁNG[day].map(s => ({ subject: s || "" })),
+            CHIỀU: finalSchedule.CHIỀU[day].map(s => ({ subject: s || "" })),
           };
         });
 
-      printTeachersTKB(gvList);
+        return {
+          name: gvData.hoTen,
+          tenLop: lopName,
+          tkbData: tkbForPrint,
+        };
+      });
 
-    } catch (error) {
-      console.error("[handlePrint] Lỗi:", error);
-    }
-  };
+    printTeachersTKB(gvList);
+
+  } catch (error) {
+    console.error("[handlePrint] Lỗi:", error);
+  }
+};
 
 const handleExportExcel = async () => {
   try {
@@ -407,45 +408,46 @@ useEffect(() => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {periodsBySession[session].map((period, idx) => (
-                <TableRow key={period} sx={{ height: 36 }}>
-                  {/* Cột Tiết */}
-                  <TableCell
-                    align="center"
-                    sx={{
-                      padding: "4px",
-                      width: { xs: 36, sm: "auto" }, // mobile cố định width 36px, desktop tự động
-                      minWidth: { xs: 36, sm: "auto" },
-                      maxWidth: { xs: 36, sm: "auto" },
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {removeTHSuffix(period)}
-                  </TableCell>
+  {periodsBySession[session].map((period, idx) => (
+    <TableRow key={period} sx={{ height: 36 }}>
+      {/* Cột Tiết */}
+      <TableCell
+        align="center"
+        sx={{
+          padding: "4px",
+          width: { xs: 36, sm: "auto" }, // mobile cố định width 36px, desktop tự động
+          minWidth: { xs: 36, sm: "auto" },
+          maxWidth: { xs: 36, sm: "auto" },
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {removeTHSuffix(period)}
+      </TableCell>
 
-                  {/* Các cột ngày */}
-                  {days.map(day => (
-                    <TableCell
-                      key={day}
-                      align="center"
-                      sx={{
-                        padding: "4px",
-                        width: { xs: 80, sm: "auto" }, // mobile cố định width 80px, desktop linh hoạt
-                        minWidth: { xs: 80, sm: "auto" },
-                        maxWidth: { xs: 80, sm: "auto" },
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {removeTHSuffix(schedule[session][day]?.[idx])}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
+      {/* Các cột ngày */}
+      {days.map(day => (
+        <TableCell
+          key={day}
+          align="center"
+          sx={{
+            padding: "4px",
+            width: { xs: 80, sm: "auto" }, // mobile cố định width 80px, desktop linh hoạt
+            minWidth: { xs: 80, sm: "auto" },
+            maxWidth: { xs: 80, sm: "auto" },
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {removeTHSuffix(schedule[session][day]?.[idx])}
+        </TableCell>
+      ))}
+    </TableRow>
+  ))}
+</TableBody>
+
           </Table>
         </TableContainer>
       </Box>

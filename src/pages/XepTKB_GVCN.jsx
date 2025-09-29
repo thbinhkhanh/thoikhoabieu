@@ -187,73 +187,6 @@ useEffect(() => {
     fetchData();
   }, []);
 
-  
-{/*const getGVBMFromContext = async (baseSchedule, lopName, currentDocId, tkbAllTeachers) => {
-  try {
-    // --- 1. Lấy dữ liệu GVBM ---
-    const gvbmData = tkbAllTeachers?.[currentDocId];
-    if (!gvbmData) {
-      console.warn(`[getGVBMFromContext] Không tìm thấy dữ liệu GVBM cho file ${currentDocId}`);
-      return baseSchedule;
-    }
-
-    // --- 2. Clone baseSchedule ---
-    const mergedSchedule = JSON.parse(JSON.stringify(baseSchedule));
-
-    // --- 3. Thu thập tất cả môn học GVBM ---
-    const gvbmSubjects = new Set();
-    Object.values(gvbmData).forEach(gvSchedule => {
-      days.forEach(day => {
-        const dayData = gvSchedule[day];
-        if (!dayData) return;
-        (dayData.morning || []).forEach(slot => slot?.subject && gvbmSubjects.add(slot.subject));
-        (dayData.afternoon || []).forEach(slot => slot?.subject && gvbmSubjects.add(slot.subject));
-      });
-    });
-
-    // --- 4. Xoá slot trùng môn ---
-    ["SÁNG", "CHIỀU"].forEach(session => {
-      days.forEach(day => {
-        mergedSchedule[session][day] = mergedSchedule[session][day].map(subj =>
-          gvbmSubjects.has(subj) ? "" : subj
-        );
-      });
-    });
-
-    // --- 5. Merge GVBM vào lớp ---
-    Object.entries(gvbmData).forEach(([gvId, gvSchedule]) => {
-      days.forEach(day => {
-        const dayData = gvSchedule[day];
-        if (!dayData) return;
-
-        (dayData.morning || []).forEach((slot, idx) => {
-          if (slot && slot.class === lopName && slot.subject?.trim()) {
-            mergedSchedule.SÁNG[day][idx] = slot.subject;
-          }
-        });
-
-        (dayData.afternoon || []).forEach((slot, idx) => {
-          if (slot && slot.class === lopName && slot.subject?.trim()) {
-            mergedSchedule.CHIỀU[day][idx] = slot.subject;
-          }
-        });
-      });
-    });
-
-    //console.log(`[Merge] Đã xoá và merge TKB GVBM lớp ${lopName} từ file ${currentDocId}`);
-
-    // --- 6. Ghi schedule vào Firestore ---
-    await setDoc(doc(db, "TKB_LOP_2025-2026", lopName), { schedule: mergedSchedule }, { merge: true });
-    //console.log(`[Firestore] Đã cập nhật TKB lớp ${lopName} vào Firestore`);
-
-    return mergedSchedule;
-
-  } catch (error) {
-    console.error(`[Error] Lỗi merge và lưu TKB GVBM cho lớp ${lopName}:`, error);
-    return baseSchedule;
-  }
-};*/}
-
 const fetchAllSchedules = async () => { 
   if (!currentDocId) return;
 
@@ -290,64 +223,112 @@ useEffect(() => {
   fetchAllSchedules();
 }, [currentDocId]);
 
-const fetchScheduleForLop = async (lopName) => {
-  if (!lopName) return;
+const vietTatMon = {
+    "ÂN": "Âm nhạc",
+    "MT": "Mĩ thuật",
+    "ĐĐ": "Đạo đức",
+    // thêm các môn khác...
+  };
 
-  // 1️⃣ Kiểm tra context trước
-  if (contextSchedule?.[lopName]) {
-    //console.log("✅ Lấy schedule từ context:", lopName, contextSchedule[lopName]);
-    setSchedule(contextSchedule[lopName]);
-    return;
-  }
+const getGVBMFromContext = (baseSchedule, lopName, currentDocId, tkbAllTeachers) => {
+    try {
+      const gvbmData = tkbAllTeachers?.[currentDocId];
+      if (!gvbmData) {
+        console.warn(`[getGVBMFromContext] Không tìm thấy dữ liệu GVBM cho file ${currentDocId}`);
+        return baseSchedule;
+      }
 
-  // 2️⃣ Nếu context chưa có, fetch Firestore
-  try {
-    if (!currentDocId) {
-      console.warn("⚠️ currentDocId chưa có, dùng schedule rỗng");
-      const emptySchedule = { SÁNG: {}, CHIỀU: {} };
-      days.forEach(day => {
-        emptySchedule.SÁNG[day] = Array(5).fill(null);
-        emptySchedule.CHIỀU[day] = Array(4).fill(null);
-      });
-      setSchedule(emptySchedule);
-      return;
-    }
+      // Clone để tránh mutate
+      const mergedSchedule = JSON.parse(JSON.stringify(baseSchedule));
 
-    const gvcnDocRef = doc(db, "TKB_GVCN", currentDocId);
-    const gvcnSnap = await getDoc(gvcnDocRef);
-
-    let finalSchedule;
-    if (gvcnSnap.exists()) {
-      const gvcnData = gvcnSnap.data();
-      // Lấy trực tiếp schedule lớp
-      finalSchedule = gvcnData[lopName] || { SÁNG: {}, CHIỀU: {} };
-      // Đảm bảo đầy đủ số tiết
+      // Chuẩn hoá cấu trúc
       ["SÁNG", "CHIỀU"].forEach(session => {
-        const numPeriods = session === "SÁNG" ? 5 : 4;
+        mergedSchedule[session] ||= {};
         days.forEach(day => {
-          finalSchedule[session][day] = finalSchedule[session][day] || Array(numPeriods).fill(null);
+          mergedSchedule[session][day] ||= [];
         });
       });
-      //console.log("📦 Lấy schedule từ Firestore:", lopName, finalSchedule);
-    } else {
-      console.warn("⚠️ Không tìm thấy document TKB_GVCN", currentDocId);
-      finalSchedule = { SÁNG: {}, CHIỀU: {} };
-      days.forEach(day => {
-        finalSchedule.SÁNG[day] = Array(5).fill(null);
-        finalSchedule.CHIỀU[day] = Array(4).fill(null);
+
+      // Thu thập môn GVBM
+      const gvbmSubjects = new Set();
+      Object.values(gvbmData).forEach(gvSchedule => {
+        days.forEach(day => {
+          const dayData = gvSchedule[day];
+          if (!dayData) return;
+
+          [...(dayData.morning || []), ...(dayData.afternoon || [])].forEach(slot => {
+            if (slot?.subject) gvbmSubjects.add(slot.subject);
+          });
+        });
       });
+
+      // Xoá slot cũ nếu trùng môn GVBM
+      ["SÁNG", "CHIỀU"].forEach(session => {
+        days.forEach(day => {
+          mergedSchedule[session][day] = (mergedSchedule[session][day] || []).map(
+            subj => gvbmSubjects.has(subj) ? "" : subj
+          );
+        });
+      });
+
+      // Merge slot GVBM vào lớp
+      Object.values(gvbmData).forEach(gvSchedule => {
+        days.forEach(day => {
+          const dayData = gvSchedule[day];
+          if (!dayData) return;
+
+          (dayData.morning || []).forEach((slot, idx) => {
+            if (slot?.class === lopName && slot.subject?.trim()) {
+              const fullName = vietTatMon[slot.subject] || slot.subject; // ✅ map viết tắt → đầy đủ
+              mergedSchedule.SÁNG[day][idx] = fullName;
+            }
+          });
+
+          (dayData.afternoon || []).forEach((slot, idx) => {
+            if (slot?.class === lopName && slot.subject?.trim()) {
+              const fullName = vietTatMon[slot.subject] || slot.subject; // ✅ map viết tắt → đầy đủ
+              mergedSchedule.CHIỀU[day][idx] = fullName;
+            }
+          });
+        });
+      });
+
+      return mergedSchedule;
+
+    } catch (error) {
+      console.error(`[Error] Lỗi merge GVBM cho lớp ${lopName}:`, error);
+      return baseSchedule;
+    }
+  };
+
+const fetchScheduleForLop = async (lopName) => {
+  try {
+    if (!currentDocId || !lopName) return;
+
+    // --- 1. Lấy dữ liệu GVCN từ contextSchedule đã được fetchAllSchedules lưu trước đó
+    let baseSchedule = contextSchedule?.[lopName];
+
+    if (!baseSchedule) {
+      console.warn(`⚠️ Không tìm thấy TKB GVCN của lớp "${lopName}" trong contextSchedule`);
+      baseSchedule = {
+        SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(5).fill("") }), {}),
+        CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(4).fill("") }), {})
+      };
     }
 
+    // --- 2. Merge thêm GVBM từ context tkbAllTeachers
+    const finalSchedule = getGVBMFromContext(baseSchedule, lopName, currentDocId, tkbAllTeachers);
+
+    // --- 3. Cập nhật UI
     setSchedule(finalSchedule);
 
   } catch (error) {
-    console.error("❌ Lỗi fetchScheduleForLop:", error);
-    const emptySchedule = { SÁNG: {}, CHIỀU: {} };
-    days.forEach(day => {
-      emptySchedule.SÁNG[day] = Array(5).fill(null);
-      emptySchedule.CHIỀU[day] = Array(4).fill(null);
-    });
-    setSchedule(emptySchedule);
+    console.error(`[❌ Error] Lỗi khi fetch TKB lớp ${lopName}:`, error);
+    const fallback = {
+      SÁNG: days.reduce((acc, d) => ({ ...acc, [d]: Array(5).fill("") }), {}),
+      CHIỀU: days.reduce((acc, d) => ({ ...acc, [d]: Array(4).fill("") }), {})
+    };
+    setSchedule(fallback);
   }
 };
 
@@ -643,25 +624,6 @@ useEffect(() => {
       }, 1000);
     }
   };
-
-  {/*useEffect(() => {
-    if (lop && allSchedules?.[lop]) {
-      setSchedule(allSchedules[lop]);
-      //console.log("📥 Cập nhật schedule từ context cho lớp:", lop);
-    }
-  }, [lop, allSchedules]);*/}
-
-  useEffect(() => {
-    if (!lop) return;
-
-    // Kiểm tra contextSchedule cho lớp hiện tại
-    if (contextSchedule?.[lop]) {
-      setSchedule(contextSchedule[lop]); // cập nhật state component từ context
-      //console.log("📥 Cập nhật schedule từ context cho lớp:", lop);
-    }
-  }, [lop, contextSchedule]);
-
-
 
   //Không lưu firestore
   const handleImportExcel1 = async (e) => {

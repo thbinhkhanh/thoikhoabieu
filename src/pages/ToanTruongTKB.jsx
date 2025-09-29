@@ -35,6 +35,8 @@ import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz"; // icon chuyển đổi
 import { useOpenFile } from "../contexts/OpenFileContext"; // đường dẫn tùy bạn
 
+import { useGVCN } from "../contexts/ContextGVCN"; // đường dẫn tùy theo bạn
+
 const days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
 
 //export default function XepTKBToanTruong() {
@@ -71,6 +73,9 @@ const [loadingProgress, setLoadingProgress] = useState(0);
 
 const [openFileHandler, setOpenFileHandler] = useState(null);
 const { setOpenFileName } = useOpenFile(); // 🔹 lấy setter từ context
+
+const [teacherStatsList, setTeacherStatsList] = useState([]);
+const { contextSchedule, setContextSchedule, contextRows } = useGVCN();
 
 // lock để chống double-add trong StrictMode/dev
 const addLockRef = useRef({});
@@ -300,6 +305,43 @@ const handleAddRow = (session, period) => {
   }, 0);
 };
 
+const updateTeacherStats = (gvId) => {
+  const scheduleByDay = tkbAllTeachers[currentDocId]?.[gvId];
+  if (!scheduleByDay) return;
+
+  const daysOfWeek = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
+  const weeklyData = {};
+  let total = 0;
+
+  daysOfWeek.forEach(day => {
+    const daySchedule = scheduleByDay?.[day];
+    if (!daySchedule) {
+      weeklyData[day] = 0;
+      return;
+    }
+
+    const morning = daySchedule.morning || [];
+    const afternoon = daySchedule.afternoon || [];
+    const count = [...morning, ...afternoon].filter(Boolean).length;
+
+    weeklyData[day] = count;
+    total += count;
+  });
+
+  // ✅ Cập nhật lại thống kê cho giáo viên đó
+  setTeacherStatsList(prev =>
+    prev.map(t =>
+      t.id === gvId
+        ? {
+            ...t,
+            total,
+            weeklyBreakdown: weeklyData
+          }
+        : t
+    )
+  );
+};
+
 const handleChangeRow = (session, period, index, field, value) => {
   let oldRow = null;
   let newRow = null;
@@ -382,15 +424,26 @@ const handleChangeRow = (session, period, index, field, value) => {
       });
     }
 
-    // ✅ Cập nhật lại context giống như yêu cầu
+    // ✅ Cập nhật lại dữ liệu vào đúng vị trí trong tkbAllTeachers
     setTkbAllTeachers(prev => ({
       ...prev,
-      [selectedDay]: {
-        ...prev[selectedDay],
-        tkbByPeriod: tkbRef.current,
-        totalPeriods: totalPeriodsRef.current
+      [currentDocId]: {
+        ...prev[currentDocId],
+        [selectedDay]: {
+          ...prev[currentDocId]?.[selectedDay],
+          tkbByPeriod: tkbRef.current,
+          totalPeriods: totalPeriodsRef.current
+        }
       }
     }));
+
+    // ✅ Gọi cập nhật thống kê cho giáo viên vừa thay đổi
+    if (newId) {
+      updateTeacherStats(newId);
+    }
+    if (oldId && oldId !== newId) {
+      updateTeacherStats(oldId);
+    }
   }, 0);
 };
 
@@ -856,6 +909,29 @@ const handleSave = async () => {
         ...updatedGVs
       }
     }));
+
+    console.log("📦 contextSchedule trước khi cập nhật:", contextSchedule);
+    
+    setContextSchedule(prev => {
+      const updated = { ...prev };
+
+      if (!updated[currentDocId]) updated[currentDocId] = {};
+
+      for (const gvId in updatedGVs) {
+        const lop = contextRows.find(r => r.hoTen === gvId)?.lop;
+        if (!lop) continue;
+
+        updated[currentDocId][lop] ??= { SÁNG: {}, CHIỀU: {} };
+
+        for (const day in updatedGVs[gvId]) {
+          const { morning, afternoon } = updatedGVs[gvId][day];
+          updated[currentDocId][lop]["SÁNG"][day] = morning;
+          updated[currentDocId][lop]["CHIỀU"][day] = afternoon;
+        }
+      }
+
+      return updated;
+    });
 
     //alert("✅ Lưu thành công!");
   } catch (err) {

@@ -10,20 +10,37 @@ export const monHocContext = {
   MON: []
 };
 
+// ✅ Hàm tải từ Firestore và lưu vào localStorage
 export async function loadMonHocContext(db) {
   const khoiDocs = ["K1", "K2", "K3", "K4", "K5"];
-  
+  const temp = { K1: [], K2: [], K3: [], K4: [], K5: [], MON: [] };
+
   for (const khoi of khoiDocs) {
     const docRef = doc(db, "MONHOC_2025-2026", khoi);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {   // ✅ exists() là hàm
-      monHocContext[khoi] = docSnap.data().monHoc || [];
+    if (docSnap.exists()) {
+      temp[khoi] = docSnap.data().monHoc || [];
     }
   }
 
   const monDocRef = doc(db, "MONHOC_2025-2026", "MON");
   const monDocSnap = await getDoc(monDocRef);
   if (monDocSnap.exists()) {
-    monHocContext.MON = monDocSnap.data().monHoc || [];
+    temp.MON = monDocSnap.data().monHoc || [];
+  }
+
+  // ✅ Gán vào biến toàn cục
+  Object.assign(monHocContext, temp);
+
+  // ✅ Lưu vào localStorage
+  localStorage.setItem("monHocContext", JSON.stringify(temp));
+}
+
+// ✅ Hàm khởi tạo từ cache nếu có
+export function initMonHocContextFromCache() {
+  const cached = localStorage.getItem("monHocContext");
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    Object.assign(monHocContext, parsed);
   }
 }

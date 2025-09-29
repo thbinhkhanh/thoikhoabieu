@@ -1,25 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Checkbox,
-  TableContainer,
-  Paper,
-  Stack,
-  Tooltip,
-  IconButton,
-  TextField,
-  Typography,
-  LinearProgress,
-  Card,
-  CardContent,
-  Button
+  Box, Table, TableHead, TableBody, TableRow, TableCell, Checkbox,
+  TableContainer, Paper, Stack, Tooltip, IconButton, TextField,
+  Typography, LinearProgress, Card, CardContent, Button
 } from "@mui/material";
-
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
@@ -42,10 +26,19 @@ export default function Tab4MonHoc() {
     { docId: "K5", key: "lop5" },
   ];
 
-  // Lấy dữ liệu từ Firebase
+  const updateMonHocCache = (data) => {
+    localStorage.setItem("monHocCache", JSON.stringify(data));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const cached = localStorage.getItem("monHocCache");
+        if (cached) {
+          setMonHoc(JSON.parse(cached));
+          return;
+        }
+
         let loaded = {};
         const monSnap = await getDoc(doc(db, "MONHOC_2025-2026", "MON"));
         const { monHoc: allSubjects = [] } = monSnap.exists() ? monSnap.data() : {};
@@ -68,14 +61,15 @@ export default function Tab4MonHoc() {
         }
 
         setMonHoc(loaded);
+        updateMonHocCache(loaded);
       } catch (err) {
         console.error("❌ Lỗi khi tải môn học:", err);
       }
     };
+
     fetchData();
   }, []);
 
-  // Hàm lưu trực tiếp ô thay đổi
   const saveData = async (mon, key, value) => {
     try {
       setSaving(true);
@@ -83,14 +77,12 @@ export default function Tab4MonHoc() {
 
       const updated = { ...monHoc, [mon]: { ...monHoc[mon], [key]: value } };
       setMonHoc(updated);
+      updateMonHocCache(updated);
 
-      // Cập nhật document tương ứng
       const subjectsChecked = Object.entries(updated)
         .filter(([m, data]) => data[key])
         .map(([m]) => m);
       await updateDoc(doc(db, "MONHOC_2025-2026", key.replace("lop", "K")), { monHoc: subjectsChecked });
-
-      // Cập nhật danh sách MON nếu môn mới
       await setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
 
       setProgress(100);
@@ -102,32 +94,64 @@ export default function Tab4MonHoc() {
     }
   };
 
-  const handleAddMon = () => {
+  const handleAddMon = async () => {
     if (!newMon.trim() || monHoc.hasOwnProperty(newMon.trim())) return;
-    const updated = { ...monHoc, [newMon.trim()]: { lop1: false, lop2: false, lop3: false, lop4: false, lop5: false } };
+
+    const updated = {
+      ...monHoc,
+      [newMon.trim()]: { lop1: false, lop2: false, lop3: false, lop4: false, lop5: false }
+    };
     setMonHoc(updated);
+    updateMonHocCache(updated);
     setNewMon("");
-    // Lưu MON mới vào danh sách MON
-    setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
+
+    await setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
   };
 
-  const handleEditMon = () => {
+  const handleEditMon = async () => {
     if (!selectedMon || !newMon.trim()) return;
+
+    const newName = newMon.trim();
     const updated = { ...monHoc };
     const oldData = updated[selectedMon];
+
     delete updated[selectedMon];
-    updated[newMon.trim()] = oldData;
+    updated[newName] = oldData;
     setMonHoc(updated);
-    setNewMon(""); setSelectedMon(null); setIsEditing(false);
-    setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
+    updateMonHocCache(updated);
+
+    await setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
+
+    for (const { docId, key } of COLS) {
+      const subjectsChecked = Object.entries(updated)
+        .filter(([_, data]) => data[key])
+        .map(([m]) => m);
+      await setDoc(doc(db, "MONHOC_2025-2026", docId), { monHoc: subjectsChecked });
+    }
+
+    setNewMon("");
+    setSelectedMon(null);
+    setIsEditing(false);
   };
 
-  const handleDeleteMon = mon => {
+  const handleDeleteMon = async (mon) => {
     if (!window.confirm(`⚠️ Bạn có chắc muốn xóa môn "${mon}" không?`)) return;
+
     const updated = { ...monHoc };
     delete updated[mon];
-    setMonHoc(updated); setSelectedMon(null); setIsEditing(false);
-    setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
+    setMonHoc(updated);
+    updateMonHocCache(updated);
+    setSelectedMon(null);
+    setIsEditing(false);
+
+    await setDoc(doc(db, "MONHOC_2025-2026", "MON"), { monHoc: Object.keys(updated) });
+
+    for (const { docId, key } of COLS) {
+      const subjectsChecked = Object.entries(updated)
+        .filter(([_, data]) => data[key])
+        .map(([m]) => m);
+      await setDoc(doc(db, "MONHOC_2025-2026", docId), { monHoc: subjectsChecked });
+    }
   };
 
   return (
