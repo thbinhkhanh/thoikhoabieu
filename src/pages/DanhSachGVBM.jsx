@@ -412,9 +412,22 @@ export default function DanhSachGVBM({ setUploadHandler }) {
                 <TableCell align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold", textTransform: "uppercase", width: "100px" }}>
                   Lớp
                 </TableCell>
-                <TableCell align="center" sx={{ backgroundColor: "#1976d2", color: "#fff", fontWeight: "bold", textTransform: "uppercase", width: "100px" }}>
+                <TableCell
+                  align="center"
+                  sx={{
+                    backgroundColor: "#1976d2",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    textTransform: "uppercase",
+                    width: "100px",
+                    whiteSpace: "nowrap",       // 👉 Không cho xuống dòng
+                    overflow: "hidden",         // 👉 Ẩn phần tràn
+                    textOverflow: "ellipsis",   // 👉 Hiện ... nếu chữ dài hơn
+                  }}
+                >
                   Điều chỉnh
                 </TableCell>
+
               </TableRow>
             </TableHead>
 
