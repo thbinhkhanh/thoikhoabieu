@@ -45,7 +45,7 @@ const defaultSchedule = {
   CHIỀU: { "Thứ 2": ["", "", "", "", ""], "Thứ 3": ["", "", "", "", ""], "Thứ 4": ["", "", "", "", ""], "Thứ 5": ["", "", "", "", ""], "Thứ 6": ["", "", "", "", ""] },
 };
 
-export default function XepTKB_GVBM({ setSaveHandler }) {
+export default function XepTKB_GVBM({ setSaveHandler, setSaveAsHandler }) {
   const { contextRows, setContextRows } = useGVBM();
   //const { tkbAllTeachers, currentDocId, selectedFileId } = useSchedule(); // 🔹 thêm dòng này
   const { tkbAllTeachers, currentDocId, selectedFileId, setTkbAllTeachers } = useSchedule();
@@ -66,7 +66,10 @@ export default function XepTKB_GVBM({ setSaveHandler }) {
   const [lopCache, setLopCache] = useState({});
   const { openFileName } = useOpenFile(); 
   const { contextSchedule, setContextSchedule } = useGVCN();
-  
+  const [newDocId, setNewDocId] = useState("");
+  const { setOpenFileName } = useOpenFile(); // 🔹 lấy setter từ context
+  const [changedCells, setChangedCells] = useState([]);
+  const [localDocId, setLocalDocId] = useState(currentDocId || "");
   
   
   // Hàm fetch dữ liệu từ Firestore nếu context chưa có
@@ -434,217 +437,130 @@ const getGVSchedule = (hoTen, selectedFileId, tkbAllTeachers) => {
       setContextSchedule?.(updatedContextGVCN);
 
       setProgress(100);
-      console.log(`⏱️ Thời gian lưu: ${(performance.now() - start).toFixed(1)}ms`);
+      //console.log(`⏱️ Thời gian lưu: ${(performance.now() - start).toFixed(1)}ms`);
     } catch (err) {
       console.error("❌ Lỗi lưu GV:", err);
-      alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
+      alert("❌ Save GVBM - Lưu thất bại. Xem console để biết chi tiết.");
     } finally {
       setSaving(false);
     }
   };
 
-{/*const saveTKB_GVBM_OK = async () => {
-  if (!currentDocId) {
-    alert("⚠️ Chưa mở file nào để lưu!");
+const saveAsTKB_GVBM = async (newDocId) => {
+  if (!newDocId) {
+    alert("⚠️ Chưa nhập tên file mới để lưu!");
     return;
   }
 
-  const startTime = performance.now();
+  const start = performance.now();
   setSaving(true);
   setProgress(10);
 
   try {
-    const gvId = convertHoTenToId(selectedGV);
+    // === 1. Cập nhật context từ changedCells ===
+    const updatedGVs = {};
+    const allGVs = [...new Set(changedCells.map(c => c.gvId))];
 
-    //console.log("👉 GV đang lưu:", selectedGV, "→ id:", gvId);
-    //console.log("👉 contextSchedule ban đầu:", contextSchedule);
+    for (const gvId of allGVs) {
+      const oldTkbGV = tkbAllTeachers[currentDocId]?.[gvId] || {};
+      const newTkbGV = {};
 
-    let monDay = rows.find(row => row.hoTen === selectedGV)?.monDay || [];
-    if (monDay.length === 0) {
-      try {
-        const gvDoc = await getDoc(doc(db, "GVBM_2025-2026", gvId));
-        if (gvDoc.exists()) monDay = gvDoc.data().monDay || [];
-      } catch (e) {
-        console.warn("⚠️ Không lấy được monDay từ GVBM:", e);
+      for (const day in oldTkbGV) {
+        const { morning, afternoon } = oldTkbGV[day] || {};
+        newTkbGV[day] = {
+          morning: Array.isArray(morning) ? [...morning] : Array(5).fill(null),
+          afternoon: Array.isArray(afternoon) ? [...afternoon] : Array(4).fill(null),
+        };
       }
-    }
-    //console.log("👉 Danh sách môn (monDay):", monDay);
 
-    const vietTatToMon = Object.fromEntries(
-      monDay.map(mon => {
-        const vt = mon.split(" ").map(tu => tu[0] || "").join("").toUpperCase();
-        return [vt, mon];
-      }).filter(([vt]) => vt)
-    );
+      const gvChanges = changedCells.filter(c => c.gvId === gvId);
+      gvChanges.forEach(change => {
+        const { day, session, period, className } = change;
+        const sessionKey = session === "morning" ? "morning" : "afternoon";
+        const periodIndex = period - 1;
 
-    const normalize = s =>
-      String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    const normalizedSubjects = monDay.map(normalize);
-    const hasTin = normalizedSubjects.includes("tin hoc");
+        if (!newTkbGV[day]) {
+          newTkbGV[day] = {
+            morning: Array(5).fill(null),
+            afternoon: Array(4).fill(null),
+          };
+        }
 
-    const inferSubject = (providedSubject, baseClass) => {
-      if (providedSubject?.trim()) {
-        const vt = providedSubject.trim().toUpperCase();
-        return vietTatToMon[vt] || providedSubject;
-      }
-      if (monDay.length === 0) return "";
-      if (monDay.length === 1) return monDay[0];
-      if (hasTin) {
-        const realTin = monDay.find(m => normalize(m) === "tin hoc");
-        return realTin || "Tin học";
-      }
-      return "";
-    };
-
-    const fileRefGVBM = doc(db, "TKB_GVBM", currentDocId);
-    const snapGVBM = await getDoc(fileRefGVBM);
-    const oldDataGVBM = snapGVBM.exists() ? snapGVBM.data() : { tkb: {} };
-    const oldTkbGV = oldDataGVBM.tkb?.[gvId] || {};
-
-    let updatedContextGVCN = { ...(contextSchedule || {}) };
-    const batch = writeBatch(db);
-    let anyChange = false;
-    const changedClassesMap = new Map();
-
-    const emptyPeriodsBySession = {
-      SÁNG: Array(periodsBySession["SÁNG"].length).fill(null),
-      CHIỀU: Array(periodsBySession["CHIỀU"].length).fill(null),
-    };
-
-    const emptySubjectsBySession = {
-      SÁNG: Array(periodsBySession["SÁNG"].length).fill(""),
-      CHIỀU: Array(periodsBySession["CHIỀU"].length).fill(""),
-    };
-
-    const normalizedSchedule = { morning: {}, afternoon: {} };
-    ["SÁNG", "CHIỀU"].forEach(session => {
-      const sessionKey = session === "SÁNG" ? "morning" : "afternoon";
-      days.forEach(day => {
-        const tiets = Array.isArray(schedule[session]?.[day])
-          ? schedule[session][day]
-          : [...emptyPeriodsBySession[session]];
-
-        normalizedSchedule[sessionKey][day] = tiets.map((val, idx) => {
-          if (val == null) return null;
-          if (typeof val === "object") {
-            const cls = String(val.class || "").trim();
-            const subj = val.subject?.trim()
-              ? inferSubject(val.subject, cls)
-              : inferSubject("", cls);
-            return cls ? { class: cls, subject: subj, period: idx + 1 } : null;
-          }
-          if (typeof val === "string") {
-            const raw = val.trim();
-            if (!raw) return null;
-            const m = raw.match(/^(.+?)\s*\((.+?)\)$/);
-            if (m) {
-              const lop = m[1].trim();
-              const vt = m[2].trim().toUpperCase();
-              const monHoc = vietTatToMon[vt] || inferSubject("", lop);
-              return { class: lop, subject: monHoc, period: idx + 1 };
-            }
-            return { class: raw, subject: inferSubject("", raw), period: idx + 1 };
-          }
-          return null;
-        });
-      });
-    });
-
-    days.forEach(day => {
-      ["morning", "afternoon"].forEach(sessionKey => {
-        const sessionLabel = sessionKey === "morning" ? "SÁNG" : "CHIỀU";
-        const oldArr = oldTkbGV?.[day]?.[sessionKey] || [...emptyPeriodsBySession[sessionLabel]];
-        const newArr = normalizedSchedule[sessionKey][day];
-
-        newArr.forEach((newSlot, idx) => {
-          const oldSlot = oldArr[idx] || null;
-          const slotClass = newSlot?.class || oldSlot?.class;
-          const slotSubject = newSlot?.subject || "";
-
-          const isChanged = JSON.stringify(oldSlot ?? null) !== JSON.stringify(newSlot ?? null);
-
-          if (isChanged) {
-            if (!oldTkbGV[day]) oldTkbGV[day] = {};
-            if (!oldTkbGV[day][sessionKey]) oldTkbGV[day][sessionKey] = [...oldArr];
-            oldTkbGV[day][sessionKey][idx] = newSlot;
-            anyChange = true;
-
-            if (slotClass) {
-              if (!updatedContextGVCN[slotClass]) updatedContextGVCN[slotClass] = { SÁNG: {}, CHIỀU: {} };
-              if (!updatedContextGVCN[slotClass][sessionLabel][day]) {
-                updatedContextGVCN[slotClass][sessionLabel][day] = [...emptySubjectsBySession[sessionLabel]];
-              }
-              updatedContextGVCN[slotClass][sessionLabel][day][idx] = slotSubject;
-              changedClassesMap.set(slotClass, updatedContextGVCN[slotClass]);
+        if (periodIndex >= 0 && periodIndex < newTkbGV[day][sessionKey].length) {
+          let cls = "", subject = "";
+          if (className?.includes("|")) {
+            [cls, subject] = className.split("|").map(s => s.trim());
+          } else {
+            const match = className?.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (match) {
+              cls = match[1].trim();
+              subject = match[2].trim();
+            } else {
+              cls = className?.trim() || "";
+              subject = "";
             }
           }
-        });
+
+          const cleanedClass = cls?.trim();
+          const cleanedSubject = subject?.trim();
+
+          // Nếu cả class và subject đều rỗng → xóa tiết
+          if (!cleanedClass && !cleanedSubject) {
+            newTkbGV[day][sessionKey][periodIndex] = null;
+          } else {
+            newTkbGV[day][sessionKey][periodIndex] = {
+              class: cleanedClass || "",
+              subject: cleanedSubject || "",
+              period
+            };
+          }
+        }
       });
-    });
 
-    //console.log("📌 Danh sách lớp trong updatedContextGVCN:", Object.keys(updatedContextGVCN));
-
-    if (anyChange) {
-      batch.set(fileRefGVBM, {
-        ...oldDataGVBM,
-        tkb: { ...(oldDataGVBM.tkb || {}), [gvId]: oldTkbGV },
-        updatedAt: new Date(),
-      }, { merge: true });
-
-      const fileRefGVCN = doc(db, "TKB_GVCN", currentDocId);
-      const snapGVCN = await getDoc(fileRefGVCN);
-
-      if (snapGVCN.exists()) {
-        const gvcnsToUpdate = Object.fromEntries(changedClassesMap);
-        //console.log("♻️ Cập nhật vào file TKB_GVCN:", currentDocId, "→ lớp thay đổi:", Object.keys(gvcnsToUpdate));
-        batch.set(fileRefGVCN, gvcnsToUpdate, { merge: true });
-      } else {
-        // 🆕 Khởi tạo đầy đủ khung TKB từ context
-        const allClasses = Object.keys(contextSchedule || {});
-        const fullEmptySchedule = {};
-        allClasses.forEach(cls => {
-          fullEmptySchedule[cls] = { SÁNG: {}, CHIỀU: {} };
-          days.forEach(day => {
-            fullEmptySchedule[cls]["SÁNG"][day] = [...emptySubjectsBySession["SÁNG"]];
-            fullEmptySchedule[cls]["CHIỀU"][day] = [...emptySubjectsBySession["CHIỀU"]];
-          });
-        });
-
-        const mergedInit = { ...fullEmptySchedule, ...updatedContextGVCN };
-        //console.log("🆕 Tạo file mới TKB_GVCN:", currentDocId, "→ gồm các lớp:", Object.keys(mergedInit));
-        batch.set(fileRefGVCN, mergedInit);
-      }
-
-      await batch.commit();
-      //console.log("✅ Đã lưu thay đổi vào GVBM & GVCN");
-    } else {
-      //console.log("ℹ️ Không có slot nào thay đổi, không cần lưu");
+      updatedGVs[gvId] = newTkbGV;
     }
 
-    if (typeof setTkbAllTeachers === "function") {
-      setTkbAllTeachers(prev => ({
+    // === 2. Cập nhật context tkbAllTeachers ===
+    const fullGVBM = {
+      ...(tkbAllTeachers[currentDocId] || {}),
+      ...updatedGVs,
+    };
+
+    setTkbAllTeachers(prev => {
+      const updated = {
         ...(prev || {}),
-        [currentDocId]: {
+        [newDocId]: {
           ...(prev?.[currentDocId] || {}),
-          [gvId]: oldTkbGV,
+          ...updatedGVs,
         },
-      }));
-    }
+      };
+      // ✅ Lưu ngay từ bản context mới
+      const fileRef = doc(db, "TKB_GVBM", newDocId);
+      setDoc(fileRef, {
+        tkb: updated[newDocId],
+        updatedAt: new Date(),
+      });
+      return updated;
+    });
 
-    if (typeof setContextSchedule === "function") {
-      setContextSchedule(updatedContextGVCN);
-    }
+    setChangedCells([]);
 
+    // === 4. Cập nhật trạng thái giao diện ===
+    setLocalDocId(newDocId);
+    setOpenFileName(newDocId);
     setProgress(100);
-    const endTime = performance.now();
-    console.log(`⏱️ Thời gian lưu: ${(endTime - startTime).toFixed(1)}ms`);
+
+    //alert(`✅ SaveAs-Test GVBM thành công: ${newDocId}`);
+    //console.log(`⏱️ Thời gian lưu: ${(performance.now() - start).toFixed(1)}ms`);
   } catch (err) {
-    console.error("❌ Lỗi lưu GV:", err);
+    console.error("❌ Lỗi khi lưu bản sao GVBM:", err);
     alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
   } finally {
     setSaving(false);
   }
-};*/}
+};
+
+// Truyền qua App.jsx
 
 useEffect(() => {
   if (
@@ -658,6 +574,12 @@ useEffect(() => {
     setSaveHandler(() => saveTKB_GVBM);
   }
 }, [setSaveHandler, selectedGV, currentDocId, rows, schedule]);
+
+useEffect(() => {
+  if (setSaveAsHandler) {
+    setSaveAsHandler(() => (docId) => saveAsTKB_GVBM(docId));
+  }
+}, [setSaveAsHandler]);
 
 function tachLop(value) {
   if (!value) return null;
@@ -1308,45 +1230,42 @@ const renderScheduleTable = (session) => {
                           "& .MuiSelect-icon": { display: "none" },
                           "&:hover .MuiSelect-icon": { display: "block" }
                         }}
-                        onChange={async e => {  // ✅ async
+                        onChange={async e => {
                           const newValue = e.target.value;
                           const m = newValue.match(/^(.+?)\s*(?:\((.+?)\))?$/);
-                          const base = m ? m[1].trim() : newValue;
+                          const base = m ? m[1].trim() : newValue.trim();
                           const suffix = m && m[2] ? m[2].trim() : "";
                           const subjectFromClass = suffix && suffix.toLowerCase() !== "th" ? suffix : "";
 
-                          // ✅ Kiểm tra xung đột trước khi cập nhật
                           const conflictsGV = await checkInlineConflict(session, day, idx + 1, base);
-                          
-                          {/*if (conflictsGV.length > 0) {
-                            setInlineConflicts([
-                              `⚠️ Lớp ${base}: trùng tiết (GV: ${conflictsGV.map(gvId => formatGVName(gvId)).join(", ")})`
-                            ]);
-                            setTimeout(() => setInlineConflicts([]), 4000);
-                            return; // ❌ Ngăn ghi trùng tiết
-                          }*/}
 
                           if (conflictsGV.length > 0) {
-                            const messages = conflictsGV.map(c => 
+                            const messages = conflictsGV.map(c =>
                               `⚠️ Trùng tiết với ${formatGVName(c.gvId)} (${c.lop} - tiết ${c.period})`
                             );
                             setInlineConflicts(messages);
                             setTimeout(() => setInlineConflicts([]), 4000);
-                            return; // ❌ Ngăn ghi trùng tiết
+                            return;
                           }
 
-
-                          // Không trùng → cập nhật schedule
                           const updatedSchedule = { ...schedule };
                           if (!updatedSchedule[session]) updatedSchedule[session] = {};
                           if (!Array.isArray(updatedSchedule[session][day])) {
-                            updatedSchedule[session][day] = Array(periodsBySession[session].length).fill({ class: "", subject: "" });
+                            updatedSchedule[session][day] = Array(periodsBySession[session].length).fill(null);
                           }
 
-                          updatedSchedule[session][day][idx] = { class: base, subject: subjectFromClass, period: idx + 1 };
+                          const isEmptySlot = !base?.trim() && !subjectFromClass?.trim();
+
+                          updatedSchedule[session][day][idx] = isEmptySlot
+                            ? null
+                            : { class: base.trim(), subject: subjectFromClass.trim(), period: idx + 1 };
 
                           setSchedule(updatedSchedule);
-                          setContextRows(prev => prev.map(gv => gv.hoTen === selectedGV ? { ...gv, tkb: updatedSchedule } : gv));
+                          setContextRows(prev =>
+                            prev.map(gv =>
+                              gv.hoTen === selectedGV ? { ...gv, tkb: updatedSchedule } : gv
+                            )
+                          );
                         }}
                         renderValue={selected => renderLabelFromOption(selected, rawCell)}
                       >

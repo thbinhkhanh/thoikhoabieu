@@ -139,11 +139,17 @@ function AppContent() {
 
   // Handler lưu
   const [gvcnSaveHandler, setGvcnSaveHandler] = useState(null);
+
   const [gvbmSaveHandler, setGvbmSaveHandler] = useState(null);
+  const [gvbmSaveAsHandler, setGvbmSaveAsHandler] = useState(null);
 
   // Handler lưu Toàn Trường
-  const [xepTKBSaveHandler, setXepTKBSaveHandler] = useState(null); // XepTKBToanTruong
+  const [thuCongSaveHandler, setThuCongSaveHandler] = useState(null); // XepTKBToanTruong
+  const [thuCongSaveAsHandler, setThuCongSaveAsHandler] = useState(null);
+
   const [tuDongSaveHandler, setTuDongSaveHandler] = useState(null); // ToanTruongTKB_TuDong
+  const [tuDongSaveAsHandler, setTuDongSaveAsHandler] = useState(null);
+  
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [newDocName, setNewDocName] = useState("");
@@ -175,7 +181,7 @@ function AppContent() {
     return v === null ? true : v === "true";
   });
 
-  const schoolYear = "Năm học: 2025-2026";
+  //const schoolYear = "Năm học: 2025-2026";
 
   // Khai báo state cho tiến trình Lưu
   const [saveProgress, setSaveProgress] = useState(0);
@@ -307,40 +313,64 @@ function AppContent() {
       return;
     }
 
-    // ===================== TIẾN TRÌNH LƯU... =====================
+  // ===================== TIẾN TRÌNH LƯU... =====================
   if (cmd.label === "Lưu...") {
-    //await startSaveProgress();   // 👉 chạy tiến trình
+    const currentPath = window.location.pathname;
+
+    if (currentPath === "/thoikhoabieu/gvbm") {
+      setSaveMode("saveAsGVBM");
+      setNewDocName("");
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    if (currentPath === "/thoikhoabieu/gvcn") {
+      setSaveMode("saveAsGVCN");
+      setNewDocName("");
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    if (currentPath === "/thoikhoabieu/toan-truong") {
+      setSaveMode("saveAsToanTruong");
+      setNewDocName("");
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    if (currentPath === "/thoikhoabieu/tu-dong") {
+      setSaveMode("saveAsTuDong");
+      setNewDocName("");
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    // Trường hợp khác
     setSaveMode("saveAs");
+    setNewDocName("");
     setSaveDialogOpen(true);
     return;
   }
 
   // ===================== TIẾN TRÌNH LƯU =====================
   if (cmd.label === "Lưu") {
-    //await startSaveProgress();   // 👉 chạy tiến trình
-
     const currentPath = window.location.pathname;
 
     if (currentPath === "/thoikhoabieu/gvbm") {
-      await startSaveProgress();   // 👉 chạy tiến trình
+      await startSaveProgress();
       gvbmSaveHandler?.();
       return;
     }
 
     if (currentPath === "/thoikhoabieu/gvcn") {
-      await startSaveProgress();   // 👉 chạy tiến trình
+      await startSaveProgress();
       gvcnSaveHandler?.();
       return;
     }
 
     if (currentPath === "/thoikhoabieu/toan-truong") {
-      if (openFileName === "TKB chưa lưu") {
-        setNewDocName("");
-        setSaveDialogOpen(true);
-      } else {
-        await startSaveProgress();   // 👉 chạy tiến trình
-        xepTKBSaveHandler?.();
-      }
+      await startSaveProgress();
+      thuCongSaveHandler?.(); // gọi hàm lưu thủ công toàn trường
       return;
     }
 
@@ -349,8 +379,8 @@ function AppContent() {
         setNewDocName("");
         setSaveDialogOpen(true);
       } else {
-        await startSaveProgress();   // 👉 chạy tiến trình
-        await saveHandler?.();
+        await startSaveProgress();
+        await tuDongSaveHandler?.();
       }
       return;
     }
@@ -529,9 +559,9 @@ function AppContent() {
               </Typography>
             )}
 
-            <Typography variant="subtitle2" sx={{ color: "#fff", ml: 2 }}>
+            {/*<Typography variant="subtitle2" sx={{ color: "#fff", ml: 2 }}>
               {schoolYear}
-            </Typography>
+            </Typography>*/}
           </Box>
 
 
@@ -678,30 +708,49 @@ function AppContent() {
 
 
       {/* ✅ Hộp thoại mở file */}
-      <FileOpenDialog
+      *<FileOpenDialog
         open={openFileDialog}
         onClose={() => setOpenFileDialog(false)}
       />
 
-      {/* ✅ Hộp thoại lưu */}
-      <SaveDialog
+      
+      {/*<SaveDialog
         open={saveDialogOpen}
         onClose={() => setSaveDialogOpen(false)}
         saveMode={saveMode}
         docName={newDocName}
         setDocName={setNewDocName}
         onSave={(safeDocId) => {
-          const currentPath = window.location.pathname;
-
-          if (currentPath === "/thoikhoabieu/gvbm") {
-            if (gvbmSaveHandler) gvbmSaveHandler(safeDocId);
-          } else if (currentPath === "/thoikhoabieu/gvcn") {
-            if (gvcnSaveHandler) gvcnSaveHandler(safeDocId);
-          } else {
-            console.warn("⚠️ SaveAs không xác định được trang hiện tại");
+          switch (saveMode) {
+            case "saveAsGVBM":
+              console.log("✅ Gọi saveAsGVBM");
+              handlers?.saveAsGVBM?.(safeDocId);
+              break;
+            case "saveAsGVCN":
+              console.log("✅ Gọi saveAsGVCN");
+              handlers?.saveAsGVCN?.(safeDocId);
+              break;
+            case "saveAsToanTruong":
+              console.log("✅ Gọi saveAsToanTruong");
+              handlers?.saveAsToanTruong?.(safeDocId);
+              break;
+            case "saveAsTuDong":
+            case "saveAsTuDongChinhThuc":
+              console.log("✅ Gọi saveAsTuDong");
+              handlers?.saveAsTuDong?.(safeDocId);
+              break;
+            default:
+              console.log("⚠️ Gọi fallback save");
+              if (window.location.pathname === "/thoikhoabieu/gvbm") {
+                gvbmSaveHandler?.(safeDocId);
+              } else if (window.location.pathname === "/thoikhoabieu/gvcn") {
+                gvcnSaveHandler?.(safeDocId);
+              } else {
+                console.warn("⚠️ Không xác định được trang hiện tại để gọi Save");
+              }
           }
         }}
-      />
+      />*/}
 
       <Box sx={{ pt: "100px", px: 2 }}>
         <Routes>
@@ -722,7 +771,13 @@ function AppContent() {
 
           <Route
             path="/thoikhoabieu/gvbm"
-            element={<XepTKB_GVBM key={refreshKey} setSaveHandler={setGvbmSaveHandler} />}
+            element={
+              <XepTKB_GVBM
+                key={refreshKey}
+                setSaveHandler={setGvbmSaveHandler}
+                setSaveAsHandler={setGvbmSaveAsHandler} // 👈 thêm dòng này
+              />
+            }
           />
 
           {/* XepTKBToanTruong */}
@@ -732,7 +787,8 @@ function AppContent() {
               <XepTKBToanTruong
                 key={refreshKey}
                 onOpenFile={setOpenFileHandler}
-                setSaveHandler={setXepTKBSaveHandler} // ❌ phân biệt riêng
+                setThuCongSaveHandler={setThuCongSaveHandler}       // xử lý "Lưu"
+                setThuCongSaveAsHandler={setThuCongSaveAsHandler}   // ✅ xử lý "Lưu..."
               />
             }
           />
@@ -744,7 +800,8 @@ function AppContent() {
               <XepTKBTuDong
                 key={refreshKey}
                 setOpenFileHandler={setOpenFileHandler}
-                setSaveHandler={setSaveHandler} // 👈 thêm dòng này để truyền hàm lưu
+                setTuDongSaveHandler={setTuDongSaveHandler} 
+                setTuDongSaveAsHandler={setTuDongSaveAsHandler}                 
               />
             }
           />
@@ -762,6 +819,27 @@ function AppContent() {
           <Route path="/phan-cong-lop-gvbm/:gvbmId" element={<PhanCongLopGVBM />} />
           <Route path="/hethong" element={<HeThong />} />
         </Routes>
+
+        {/* ✅ SaveDialog phải nằm ngoài Routes để luôn hiển thị khi cần */}
+        <SaveDialog
+          docName={newDocName}
+          setDocName={setNewDocName}
+          open={saveDialogOpen}
+          onClose={() => setSaveDialogOpen(false)}
+          saveMode={saveMode}
+          handlers={{
+            saveAsGVCN: gvcnSaveHandler,
+
+            saveGVBM: gvbmSaveHandler,         // ✅ hàm Lưu
+            saveAsGVBM: gvbmSaveAsHandler,     // ✅ hàm Lưu với tên mới
+
+            saveAsToanTruong: thuCongSaveAsHandler, 
+
+            saveAsTuDong: tuDongSaveAsHandler,      
+            saveAsTuDongChinhThuc: tuDongSaveAsHandler,
+          }}
+        />
+
       </Box>
     </>
   );

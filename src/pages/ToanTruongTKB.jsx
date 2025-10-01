@@ -29,19 +29,19 @@ import { db } from "../firebase";
 import { ScheduleContext } from '../contexts/ScheduleContext'; // cập nhật đường dẫn nếu cần
 
 import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
-import SaveAsIcon from "@mui/icons-material/SaveAs";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz"; // icon chuyển đổi
+//import SaveIcon from '@mui/icons-material/Save';
+//import SaveAsIcon from "@mui/icons-material/SaveAs";
+//import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+//import SwapHorizIcon from "@mui/icons-material/SwapHoriz"; // icon chuyển đổi
 import { useOpenFile } from "../contexts/OpenFileContext"; // đường dẫn tùy bạn
 
 import { useGVCN } from "../contexts/ContextGVCN"; // đường dẫn tùy theo bạn
 
 const days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
 
-//export default function XepTKBToanTruong() {
-//export default function XepTKBToanTruong({ onOpenFile }) {
-export default function XepTKBToanTruong({ onOpenFile, setSaveHandler }) {
+//export default function XepTKBToanTruong({ onOpenFile, setThuCongSaveHandler }) {
+export default function XepTKBToanTruong({ onOpenFile, setThuCongSaveHandler, setThuCongSaveAsHandler }) {
+
   const [teachers, setTeachers] = useState([]);
   const [tkb, setTkb] = useState({}); // { morning: {period: [...]}, afternoon: {...} }
   const [inlineConflicts, setInlineConflicts] = useState({});
@@ -447,7 +447,7 @@ const handleChangeRow = (session, period, index, field, value) => {
   }, 0);
 };
 
-const handleRemoveRow = async (session, period, index) => {
+const handleRemoveRow = (session, period, index) => {
   const row = tkb[session]?.[period]?.[index];
   if (!row) return;
 
@@ -458,7 +458,7 @@ const handleRemoveRow = async (session, period, index) => {
 
   const gvIdToRemove = row.gvId;
 
-  // --- 1️⃣ Cập nhật UI trước ---
+  // --- 1️⃣ Cập nhật UI ---
   setTkb(prev => {
     const prevSession = prev[session] || {};
     const rows = (prevSession[period] || []).slice();
@@ -483,79 +483,18 @@ const handleRemoveRow = async (session, period, index) => {
     return updated;
   });
 
-  setChangedCells(prev =>
-    prev.filter(
-      c =>
-        !(
-          c.gvId === gvIdToRemove &&
-          c.day === selectedDay &&
-          c.session === session &&
-          c.period === period
-        )
-    )
-  );
-
-  // --- 2️⃣ Lưu lên Firestore phía sau ---
-  if (!gvIdToRemove) return;
-
-  try {
-    setIsSaving(true);
-    setSavingProgress(0);
-
-    const docRef = doc(db, "TKB_GVBM", currentDocId);
-    const docSnap = await getDoc(docRef);
-    const oldData = docSnap.exists() ? docSnap.data() : { tkb: {} };
-    const oldTkbGV = oldData.tkb?.[gvIdToRemove] || {};
-
-    const newTkbGV = { ...oldTkbGV };
-    const sessionKey = session === "morning" ? "morning" : "afternoon";
-
-    if (!newTkbGV[selectedDay]) {
-      newTkbGV[selectedDay] = {
-        morning: Array(5).fill(null),
-        afternoon: Array(4).fill(null)
-      };
-    }
-
-    // Đảm bảo mảng đủ dài
-    const maxPeriods = sessionKey === "morning" ? 5 : 4;
-    if (!newTkbGV[selectedDay][sessionKey] || newTkbGV[selectedDay][sessionKey].length !== maxPeriods) {
-      newTkbGV[selectedDay][sessionKey] = Array(maxPeriods)
-        .fill(null)
-        .map((v, i) => oldTkbGV[selectedDay]?.[sessionKey]?.[i] || null);
-    }
-
-    newTkbGV[selectedDay][sessionKey][period - 1] = null;
-
-    // Lưu Firestore
-    await setDoc(
-      docRef,
+  // --- 2️⃣ Ghi nhận thay đổi để lưu sau ---
+  if (gvIdToRemove) {
+    setChangedCells(prev => [
+      ...prev,
       {
-        tkb: {
-          ...(oldData.tkb || {}),
-          [gvIdToRemove]: newTkbGV
-        },
-        updatedAt: new Date()
-      },
-      { merge: true }
-    );
-
-    // Cập nhật context
-    setTkbAllTeachers(prev => ({
-      ...(prev || {}),
-      [currentDocId]: {
-        ...(prev?.[currentDocId] || {}),
-        [gvIdToRemove]: newTkbGV
+        gvId: gvIdToRemove,
+        day: selectedDay,
+        session,
+        period,
+        className: null // đánh dấu là tiết bị xóa
       }
-    }));
-
-  } catch (err) {
-    console.error("❌ Xóa thất bại trên Firestore!", err);
-    alert("Xóa thất bại! Xem console để biết chi tiết.");
-    // Tùy chọn: rollback UI nếu muốn
-  } finally {
-    setIsSaving(false);
-    setSavingProgress(0);
+    ]);
   }
 };
 
@@ -600,78 +539,6 @@ const monToAbbr = {
   // thêm các môn khác nếu cần
 };
 
-const handleSaveSchedule = async () => {
-  try {
-    if (!changedCells.length) {
-      //alert("Không có thay đổi để lưu!");
-      return;
-    }
-
-    setIsSaving(true);
-    setSavingProgress(0);
-
-    const total = changedCells.length;
-    let saved = 0;
-
-    for (const cell of changedCells) {
-      const { gvId, day, session, period, className } = cell;
-      const buoiKey = session === 'morning' ? 'SÁNG' : 'CHIỀU';
-      const docRef = doc(db, "TKB_GVBM_2025-2026", gvId);
-
-      // Lấy doc hiện tại để merge
-      const docSnap = await getDoc(docRef);
-      const currentSchedule = (docSnap.exists() ? docSnap.data().schedule : {}) || {};
-
-      if (!currentSchedule[buoiKey]) currentSchedule[buoiKey] = {};
-      if (!currentSchedule[buoiKey][day]) currentSchedule[buoiKey][day] = [];
-
-      const periodsArray = currentSchedule[buoiKey][day];
-      const idx = Number(period) - 1;
-      while (periodsArray.length <= idx) periodsArray.push("");
-
-      // 🔹 Xử lý className để lấy dạng "Lớp (Viết tắt môn)"
-      let displayValue = "";
-      if (className) {
-        // Nếu className đã có dạng "4.6|Tin học"
-        if (className.includes('|')) {
-          const [cls, subjectFull] = className.split('|').map(s => s.trim());
-          const subjectAbbr = (vietTatMonMapAll[gvId]?.[subjectFull]) || subjectFull;
-          displayValue = `${cls} (${subjectAbbr})`;
-        } else {
-          // Nếu className chỉ là "4.6 (Tin học)", thì cố gắng tách thủ công
-          const match = className.match(/^(.+?)\s*\(([^)]+)\)$/);
-          if (match) {
-            const cls = match[1].trim();
-            const subjectFull = match[2].trim();
-            const subjectAbbr = (vietTatMonMapAll[gvId]?.[subjectFull]) || subjectFull;
-            displayValue = `${cls} (${subjectAbbr})`;
-          } else {
-            displayValue = className;
-          }
-        }
-      }
-
-      periodsArray[idx] = displayValue;
-      currentSchedule[buoiKey][day] = periodsArray;
-
-      // Lưu vào Firestore
-      await setDoc(docRef, { schedule: currentSchedule }, { merge: true });
-
-      //console.log(`💾 GV: ${gvId}, Ngày: ${day}, Buổi: ${buoiKey}, Tiết: ${period}, Lớp: ${displayValue} đã được lưu.`);
-
-      saved += 1;
-      setSavingProgress(Math.round((saved / total) * 100));
-    }
-
-    setChangedCells([]); // reset danh sách thay đổi
-  } catch (err) {
-    console.error("Lưu thất bại!", err);
-    alert("Lưu thất bại! Kiểm tra console.");
-  } finally {
-    setIsSaving(false);
-  }
-};
-
 const teacherColors = {
   'Bình':   '#fff79f',
   'Cang':   '#cceacc',
@@ -695,16 +562,13 @@ const teacherStats = teachers
   .filter(t => t.id && tkbAllTeachers[currentDocId]?.[t.id]) // loại bỏ giáo viên lỗi hoặc không có TKB
   .map(t => {
     const scheduleByDay = tkbAllTeachers[currentDocId][t.id];
-    console.log(`👨‍🏫 Giáo viên: ${t.id} - ${t.name}`);
-    console.log('📅 scheduleByDay:', scheduleByDay);
-
     const weeklyData = {};
     const daysOfWeek = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6'];
     let total = 0;
 
     daysOfWeek.forEach(day => {
       const daySchedule = scheduleByDay?.[day];
-      console.log(`🔍 ${day} của ${t.id}:`, daySchedule);
+      //console.log(`🔍 ${day} của ${t.id}:`, daySchedule);
 
       if (!daySchedule) {
         weeklyData[day] = 0;
@@ -729,19 +593,6 @@ const teacherStats = teachers
       weeklyBreakdown: weeklyData
     };
   });
-
-// Hàm lưu trực tiếp hoặc mở dialog nếu chưa có document
-{/*const handleSave = () => {
-  if (currentDocId) {
-    // Nếu đã có document, lưu trực tiếp
-    saveToFirestore(currentDocId);
-  } else {
-    // Nếu chưa có document, mở dialog để đặt tên mới
-    setSaveMode("save");
-    setNewDocName("");
-    setSaveModalOpen(true);
-  }
-};*/}
 
 // 🔹 Chuẩn hóa dữ liệu trước khi lưu
 // 🔹 Chuyển đổi dữ liệu thô từ Firestore sang cấu trúc chuẩn
@@ -806,28 +657,19 @@ const transformTkbForSave = (allTeachersRaw) => {
 
 // 🔹 Xử lý nút Save (icon)
 const handleSave = async () => {
-  if (!changedCells.length) {
-    //alert("Không có thay đổi để lưu!");
-    return;
-  }
+  if (!changedCells.length) return;
 
   try {
     setIsSaving(true);
-    setSavingProgress(0);
-
-    const total = changedCells.length;
-    let saved = 0;
 
     const allGVs = [...new Set(changedCells.map(c => c.gvId))];
-    const updatedGVs = {}; // lưu tạm newTkbGV của tất cả GV
+    const updatedGVs = {};
 
     for (const gvId of allGVs) {
       const docRef = doc(db, "TKB_GVBM", currentDocId);
       const docSnap = await getDoc(docRef);
       const oldData = docSnap.exists() ? docSnap.data() : { tkb: {} };
       const oldTkbGV = oldData.tkb?.[gvId] || {};
-
-      // Clone dữ liệu cũ để giữ toàn bộ các ngày/tiết khác
       const newTkbGV = { ...oldTkbGV };
 
       const gvChanges = changedCells.filter(c => c.gvId === gvId);
@@ -847,10 +689,9 @@ const handleSave = async () => {
         if (!newTkbGV[day][sessionKey] || newTkbGV[day][sessionKey].length !== maxPeriods) {
           newTkbGV[day][sessionKey] = Array(maxPeriods)
             .fill(null)
-            .map((v, i) => oldTkbGV[day]?.[sessionKey]?.[i] || null);
+            .map((_, i) => oldTkbGV[day]?.[sessionKey]?.[i] || null);
         }
 
-        // Xử lý className → object hoặc null nếu xóa
         let cls = "", subject = "";
         if (className) {
           if (className.includes("|")) {
@@ -870,17 +711,8 @@ const handleSave = async () => {
         }
 
         newTkbGV[day][sessionKey][period - 1] = cls ? { class: cls, period, subject } : null;
-
-        //console.log(
-        //  `GV: ${gvId}, Ngày: ${day}, Buổi: ${sessionKey}, Tiết: ${period}, Lưu:`,
-        //  newTkbGV[day][sessionKey][period - 1]
-        //);
       });
 
-      //console.log(`--- Lưu GV ${gvId} vào Firestore ---`);
-      //console.log(newTkbGV);
-
-      // Ghi merge lên Firestore
       await setDoc(
         docRef,
         {
@@ -893,15 +725,11 @@ const handleSave = async () => {
         { merge: true }
       );
 
-      updatedGVs[gvId] = newTkbGV; // lưu vào tạm để cập nhật context
-
-      saved += gvChanges.length;
-      setSavingProgress(Math.round((saved / total) * 100));
+      updatedGVs[gvId] = newTkbGV;
     }
 
     setChangedCells([]);
 
-    // Cập nhật context tkbAllTeachers
     setTkbAllTeachers(prev => ({
       ...(prev || {}),
       [currentDocId]: {
@@ -910,11 +738,8 @@ const handleSave = async () => {
       }
     }));
 
-    console.log("📦 contextSchedule trước khi cập nhật:", contextSchedule);
-    
     setContextSchedule(prev => {
       const updated = { ...prev };
-
       if (!updated[currentDocId]) updated[currentDocId] = {};
 
       for (const gvId in updatedGVs) {
@@ -933,57 +758,196 @@ const handleSave = async () => {
       return updated;
     });
 
-    //alert("✅ Lưu thành công!");
+    //alert("✅ Lưu thủ công thành công!");
   } catch (err) {
     console.error("❌ Lưu thất bại!", err);
     alert("Lưu thất bại! Xem console để biết chi tiết.");
   } finally {
     setIsSaving(false);
-    setSavingProgress(0);
+  }
+};
+
+const handleSaveAs = async (newDocId) => {
+  try {
+    setIsSaving(true);
+
+    let updatedGVs = {};
+    //console.log("✍️ Đang cập nhật dữ liệu từ changedCells...");
+
+    const allGVs = [...new Set(changedCells.map(c => c.gvId))];
+
+    for (const gvId of allGVs) {
+      const oldTkbGV = tkbAllTeachers[currentDocId]?.[gvId] || {};
+      const newTkbGV = {};
+
+      // Clone sâu dữ liệu cũ
+      for (const day in oldTkbGV) {
+        const { morning, afternoon } = oldTkbGV[day] || {};
+        newTkbGV[day] = {
+          morning: Array.isArray(morning) ? [...morning] : Array(5).fill(null),
+          afternoon: Array.isArray(afternoon) ? [...afternoon] : Array(4).fill(null)
+        };
+      }
+
+      const gvChanges = changedCells.filter(c => c.gvId === gvId);
+
+      gvChanges.forEach(change => {
+        const { day, session, period, className } = change;
+        const sessionKey = session === "morning" ? "morning" : "afternoon";
+        const maxPeriods = sessionKey === "morning" ? 5 : 4;
+        const periodIndex = typeof period === "number" && period >= 1 ? period - 1 : null;
+
+        if (!newTkbGV[day]) {
+          newTkbGV[day] = {
+            morning: Array(5).fill(null),
+            afternoon: Array(4).fill(null)
+          };
+        }
+
+        if (
+          periodIndex !== null &&
+          periodIndex < maxPeriods &&
+          Array.isArray(newTkbGV[day][sessionKey])
+        ) {
+          let cls = "", subject = "";
+          if (className) {
+            if (className.includes("|")) {
+              const [lop, mon] = className.split("|").map(s => s.trim());
+              cls = lop;
+              subject = mon;
+            } else {
+              const match = className.match(/^(.+?)\s*\(([^)]+)\)$/);
+              if (match) {
+                cls = match[1].trim();
+                subject = match[2].trim();
+              } else {
+                cls = className.trim();
+                subject = "";
+              }
+            }
+          }
+
+          newTkbGV[day][sessionKey][periodIndex] = cls
+            ? { class: cls, period, subject }
+            : null;
+        } else {
+          console.warn("⛔ Period không hợp lệ hoặc vượt giới hạn:", period, change);
+        }
+      });
+
+      updatedGVs[gvId] = newTkbGV;
+    }
+
+    // ✅ Cập nhật context tkbAllTeachers
+    setTkbAllTeachers(prev => ({
+      ...(prev || {}),
+      [currentDocId]: {
+        ...(prev?.[currentDocId] || {}),
+        ...updatedGVs
+      }
+    }));
+
+    // ✅ Cập nhật contextSchedule
+    setContextSchedule(prev => {
+      const updated = { ...prev };
+      if (!updated[currentDocId]) updated[currentDocId] = {};
+
+      for (const gvId in updatedGVs) {
+        const lop = contextRows.find(r => r.hoTen === gvId)?.lop;
+        if (!lop) continue;
+
+        updated[currentDocId][lop] ??= { SÁNG: {}, CHIỀU: {} };
+
+        for (const day in updatedGVs[gvId]) {
+          const { morning, afternoon } = updatedGVs[gvId][day];
+          updated[currentDocId][lop]["SÁNG"][day] = morning;
+          updated[currentDocId][lop]["CHIỀU"][day] = afternoon;
+        }
+      }
+
+      return updated;
+    });
+
+    setChangedCells([]); // ✅ reset sau khi cập nhật
+
+    // ✅ Dùng dữ liệu vừa cập nhật để sao chép
+    const sourceData = {
+      tkb: {
+        ...(tkbAllTeachers[currentDocId] || {}),
+        ...updatedGVs
+      }
+    };
+
+    const validGVs = Object.keys(sourceData.tkb || {}).filter(gvId => {
+      const value = sourceData.tkb[gvId];
+      const isValid =
+        typeof value === "object" &&
+        !gvId.startsWith("Thứ") &&
+        !value?.tkbByPeriod &&
+        !value?.totalPeriods;
+
+      if (!isValid) {
+        console.warn("⛔ Bỏ qua dữ liệu sai cấu trúc:", gvId, value);
+      }
+
+      return isValid;
+    });
+
+    const newTkb = {};
+
+    for (const gvId of validGVs) {
+      const oldTkbGV = sourceData.tkb[gvId];
+      const copiedTkbGV = {};
+
+      for (const day in oldTkbGV) {
+        const { morning, afternoon } = oldTkbGV[day] || {};
+        copiedTkbGV[day] = {
+          morning: Array.isArray(morning) ? [...morning] : Array(5).fill(null),
+          afternoon: Array.isArray(afternoon) ? [...afternoon] : Array(4).fill(null)
+        };
+      }
+
+      newTkb[gvId] = copiedTkbGV;
+    }
+
+    const targetRef = doc(db, "TKB_GVBM", newDocId);
+    await setDoc(targetRef, {
+      tkb: newTkb,
+      updatedAt: new Date()
+    });
+
+    setTkbAllTeachers(prev => ({
+      ...(prev || {}),
+      [newDocId]: newTkb
+    }));
+
+    setCurrentDocId(newDocId);
+    setOpenFileName(newDocId);
+
+    //console.log("📄 Đã chuyển sang file mới:", newDocId);
+    // alert(`✅ Đã sao chép TKB sang "${newDocId}" và mở file mới thành công!`);
+  } catch (err) {
+    console.error("❌ Sao chép thất bại!", err);
+    alert("Sao chép thất bại! Xem console để biết chi tiết.");
+  } finally {
+    setIsSaving(false);
   }
 };
 
 //Truyền qua App.jsx
 
 useEffect(() => {
-  if (setSaveHandler) {
-    setSaveHandler(() => handleSave); // ✅ dùng arrow để luôn lấy state mới nhất
+  if (setThuCongSaveHandler) {
+    ////console.log("🔗 Gán thuCongSaveHandler = handleSave ở trang Toàn trường (thủ công)");
+    setThuCongSaveHandler(() => handleSave); // ✅ arrow để luôn lấy state mới nhất
   }
-}, [setSaveHandler, changedCells]);
+}, [setThuCongSaveHandler, changedCells]);
 
-// 🔹 Khi bấm "Xác nhận lưu" trong modal
-const handleConfirmSave = async () => {
-  if (!newDocName) {
-    alert("⚠️ Vui lòng nhập tên file!");
-    return;
+useEffect(() => {
+  if (setThuCongSaveAsHandler) {
+    setThuCongSaveAsHandler(() => handleSaveAs);
   }
-
-  let dataToSave = pendingTkb;
-
-  // 🔹 Nếu pendingTkb chưa có → load lại từ Firestore và chuẩn hóa
-  if (!dataToSave) {
-    const snapshot = await getDocs(collection(db, "TKB_GVBM_2025-2026"));
-    const allTeachersRaw = {};
-    snapshot.forEach((docSnap) => {
-      allTeachersRaw[docSnap.id] = docSnap.data();
-    });
-
-    if (!allTeachersRaw || Object.keys(allTeachersRaw).length === 0) {
-      alert("❌ Không tìm thấy dữ liệu để lưu!");
-      return;
-    }
-
-    dataToSave = transformTkbForSave(allTeachersRaw);
-  }
-
-  //console.log("📥 Gọi saveToFirestore với:", {
-  //  docId: newDocName,
-  //  data: dataToSave,
-  //});
-
-  await saveToFirestore(newDocName, dataToSave);
-};
-
+}, [setThuCongSaveAsHandler, tkb]);
 
 // 🔹 Hàm ghi vào Firestore
 const saveToFirestore = async (docId, data) => {
@@ -1021,17 +985,11 @@ const saveToFirestore = async (docId, data) => {
     //console.log(`✅ Đã lưu TKB vào TKB_GVBM/${docId}`);
   } catch (error) {
     console.error("Lỗi khi lưu TKB:", error);
-    alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
+    alert("❌ Toàn trường - Lưu thất bại. Xem console để biết chi tiết.");
   } finally {
     setSaving(false);
     setSaveProgress(0);
   }
-};
-
-const handleSaveAs = () => {
-  setSaveMode("saveAs");
-  setNewDocName("");      
-  setSaveModalOpen(true); // mở dialog cho người dùng nhập tên mới
 };
 
 const [openFileDialog, setOpenFileDialog] = useState(false);
@@ -1039,75 +997,6 @@ const [tkbFiles, setTkbFiles] = useState([]);
 const [loadingFiles, setLoadingFiles] = useState(false);
 const [fileLoadProgress, setFileLoadProgress] = useState(0); // thêm
 const [selectedFileId, setSelectedFileId] = useState(null);
-
-// Hàm mở dialog và load danh sách document với tiến trình giả lập
-const handleOpenFile = async () => {
-  setOpenFileDialog(true);
-  setLoadingFiles(true);
-  setFileLoadProgress(0);
-
-  try {
-    const querySnapshot = await getDocs(collection(db, "TKB_GVBM"));
-    const docs = querySnapshot.docs;
-    const total = docs.length;
-    const files = [];
-
-    for (let i = 0; i < total; i++) {
-      const docData = docs[i];
-      files.push({ id: docData.id, ...docData.data() });
-      setFileLoadProgress(Math.round(((i + 1) / total) * 100));
-      await new Promise(res => setTimeout(res, 50)); // delay giả lập để thấy progress
-    }
-
-    setTkbFiles(files);
-  } catch (error) {
-    console.error("Lỗi khi tải danh sách document:", error);
-    alert("Không thể tải danh sách document. Xem console để biết chi tiết.");
-  } finally {
-    setLoadingFiles(false);
-    setFileLoadProgress(0);
-  }
-};
-
-// Truyền ra ngoài App.jsx
-  useEffect(() => {
-    if (onOpenFile) {
-      onOpenFile(() => handleOpenFile);
-    }
-  }, [onOpenFile]);
-
-
-// Hàm mở document đã chọn
-
-const handleOpenSelectedFile = async () => {
-  setOpenFileDialog(false);
-
-  if (!selectedFileId) return;
-  try {
-    const docRef = doc(db, "TKB_GVBM", selectedFileId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setTkb(data.tkb);
-      setCurrentDocId(selectedFileId);
-
-      // 🔹 Ghi tên file đang mở vào Firestore
-      await setDoc(doc(db, "FILE_OPEN", "filename"), { filed: selectedFileId });
-
-      // 🔹 Cập nhật context/state để UI đổi tên ngay
-      setOpenFileName(selectedFileId);
-
-      setOpenFileDialog(false);
-      //console.log("✅ Đã lưu tên file vào FILE_OPEN:", selectedFileId);
-    } else {
-      alert("Document không tồn tại.");
-    }
-  } catch (error) {
-    console.error("Lỗi khi mở document:", error);
-    alert("Không thể mở document. Xem console để biết chi tiết.");
-  }
-};
 
 //===========================
 function normalizeTeacherName(name) {
@@ -1610,113 +1499,7 @@ return (
           </Table>
         </Card>
       </Box>
-    </Card>
-
-    {/* MODAL NHẬP TÊN DOCUMENT */}
-      <Dialog
-        open={saveModalOpen}
-        onClose={() => setSaveModalOpen(false)}
-        fullWidth
-        maxWidth="sm" // sm, md, lg, xl
-        sx={{
-          '& .MuiDialog-paper': {
-            width: '500px', // chiều rộng tùy chỉnh
-            maxWidth: '80%', // tối đa 80% màn hình
-          },
-        }}
-      >
-        <DialogTitle sx={{ color: "#1976d2" }}>
-          {saveMode === "save" ? "Lưu" : "Lưu với tên mới"}
-        </DialogTitle>
-  
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            margin="normal"
-            variant="outlined"
-            value={newDocName}
-            onChange={(e) => setNewDocName(e.target.value)}
-            //placeholder="Nhập tên TKB"
-            label="Nhập tên TKB"
-          />
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "right", gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (!newDocName.trim()) return;
-              const safeDocId = newDocName.trim().replace(/\//g, "-"); // thay / bằng -
-              setSaveModalOpen(false); // ẩn hộp thoại ngay lập tức
-              saveToFirestore(safeDocId); // rồi bắt đầu lưu
-            }}
-          >
-            Lưu
-          </Button>
-  
-          <Button onClick={() => setSaveModalOpen(false)}>Hủy</Button>
-        </DialogActions>
-      </Dialog>
-  
-      <Dialog
-    open={openFileDialog}
-    onClose={() => setOpenFileDialog(false)}
-    fullWidth
-    maxWidth="sm"
-  >
-    <DialogTitle sx={{ color: "#1976d2" }}>
-      Chọn thời khóa biểu
-    </DialogTitle>
-  
-      <DialogContent>
-        {loadingFiles ? (
-          <Box sx={{ width: "100%", mt: 2, mb: 2 }}>
-            <LinearProgress 
-              variant="determinate"
-              value={loadingProgress}   // giá trị % từ state
-              sx={{ width: "50%", maxWidth: 200, height: 4, borderRadius: 3, mx: "auto" }} 
-            />
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5, textAlign: "center" }}
-            >
-              Đang tải danh sách... ({loadingProgress}%)
-            </Typography>
-          </Box>
-        ) : (
-          <List
-            sx={{
-              maxHeight: 300,        // chiều cao tối đa
-              overflowY: "auto",     // thanh cuộn dọc
-              border: "1px solid #ccc",
-              borderRadius: 1,
-            }}
-          >
-            {tkbFiles.map((file) => (
-              <ListItemButton
-                key={file.id}
-                selected={selectedFileId === file.id}
-                onClick={() => setSelectedFileId(file.id)}
-              >
-                <ListItemText primary={file.id} />
-              </ListItemButton>
-            ))}
-          </List>
-        )}
-        </DialogContent>
-          <DialogActions sx={{ justifyContent: "right", gap: 1 }}>
-            <Button
-              variant="contained"
-              onClick={handleOpenSelectedFile}
-              disabled={!selectedFileId}
-            >
-              Mở
-            </Button>
-          <Button onClick={() => setOpenFileDialog(false)}>Hủy</Button>
-        </DialogActions>
-      </Dialog>
-      
+    </Card>      
   </Box>
 );
 

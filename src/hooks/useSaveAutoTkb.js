@@ -126,7 +126,7 @@ export const useSaveAutoTkb = () => {
       //console.log(`✅ Đã lưu TKB xếp tự động: ${docId}`);
     } catch (error) {
       console.error("❌ Lỗi khi lưu TKB xếp tự động:", error);
-      alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
+      alert("❌ Hàm riêng - Lưu thất bại. Xem console để biết chi tiết.");
     } finally {
       setSaving(false);
       setSaveProgress(0);

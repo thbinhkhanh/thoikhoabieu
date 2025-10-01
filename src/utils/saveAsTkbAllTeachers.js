@@ -34,7 +34,8 @@ const normalizeTkbData = (tkbAllTeachers, openFileName) => {
   };
 
   Object.entries(teachersObj).forEach(([key, value]) => {
-    if (key === openFileName) return;
+    //if (key === openFileName) return;
+    if (openFileName === "TKB chưa lưu" && key === openFileName) return;
 
     const teacherData = mapToObject(value);
 
@@ -140,7 +141,7 @@ export const useSaveAsTkbAllTeachers = () => {
       //console.log(`✅ Đã lưu TKB và cập nhật context: ${docId}`);
     } catch (error) {
       console.error("❌ Lỗi khi lưu TKB:", error);
-      alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
+      alert("❌ Hàm lưu riêng - Lưu thất bại. Xem console để biết chi tiết.");
     } finally {
       setSaving(false);
       setSaveProgress(0);

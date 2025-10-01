@@ -80,7 +80,10 @@ const modalStyles = `
   styleSheet.innerText = modalStyles;
   document.head.appendChild(styleSheet);
 
-export default function ToanTruongTKB_TuDong({ setOpenFileHandler, setSaveHandler }) {
+//export default function ToanTruongTKB_TuDong({ setOpenFileHandler, setTuDongSaveHandler }) {
+export default function ToanTruongTKB_TuDong({ setOpenFileHandler, setTuDongSaveHandler, setTuDongSaveAsHandler }) {
+
+
   const [teachers, setTeachers] = useState([]);
   //const [tkb, setTkb] = useState({});
   const [assignments, setAssignments] = useState({});
@@ -166,10 +169,30 @@ export default function ToanTruongTKB_TuDong({ setOpenFileHandler, setSaveHandle
     setTkbState(tempState);
 
     // ✅ Cập nhật luôn context
-    setTkbAllTeachers(prev => ({
+    {/*setTkbAllTeachers(prev => ({
       ...prev,
       [currentDocId]: tempState  // hoặc dùng docId tương ứng nếu muốn
-    }));
+    }));*/}
+    setTkbAllTeachers(prev => {
+      const updated = structuredClone(prev);
+
+      if (!updated[currentDocId]) updated[currentDocId] = {};
+      if (!updated[currentDocId][gvId]) updated[currentDocId][gvId] = {};
+      if (!updated[currentDocId][gvId][day]) updated[currentDocId][gvId][day] = {};
+      if (!Array.isArray(updated[currentDocId][gvId][day][session])) {
+        const length = session === 'morning' ? 4 : 3;
+        updated[currentDocId][gvId][day][session] = Array.from({ length }, () => null);
+      }
+
+      updated[currentDocId][gvId][day][session][index] = {
+        class: newClassObj?.class || "",
+        subject: newClassObj?.subject || "",
+        tiet: index + 1, // nếu bạn cần số tiết
+        gio: "",         // nếu có giờ học, bạn có thể thêm
+      };
+
+      return updated;
+    });
   };
 
   const parsePhanCongFromFirestore = (rawArray) => {
@@ -1442,18 +1465,6 @@ function getSortedUniqueClasses(gv, assignments, vietTatMon) {
   return [...simple, ...withSuffix];
 }
 
-const handleSave = () => {
-  if (!currentDocId) {
-    // Nếu chưa có file nào đang mở → bắt buộc đặt tên
-    setSaveMode("save");
-    setNewDocName("");
-    setSaveModalOpen(true);
-  } else {
-    // Nếu đang mở file → ghi đè vào file đó
-    saveToFirestore(currentDocId);
-  }
-};
-
 const [saving, setSaving] = useState(false);
 const [saveProgress, setSaveProgress] = useState(0);
 
@@ -1527,7 +1538,7 @@ const saveToFirestore = async (docId, newDocName = null) => {
       tkb: normalizedTkb,
       updatedAt: new Date()
     };
-    if (newDocName) payload.fileName = newDocName;
+    //if (newDocName) payload.fileName = newDocName;
 
     await setDoc(docRef, payload, { merge: true });
 
@@ -1573,20 +1584,88 @@ const saveToFirestore = async (docId, newDocName = null) => {
     //alert(`✅ Lưu thành công TKB vào document "${docId}"`);
   } catch (error) {
     console.error("Lỗi khi lưu TKB:", error);
-    alert("❌ Lưu thất bại. Xem console để biết chi tiết.");
+    alert("❌ Toàn trường - Lưu thất bại. Xem console để biết chi tiết.");
   } finally {
     setSaving(false);
     setSaveProgress(0);
   }
 };
 
+const handleSave = async () => {
+  try {
+    if (!currentDocId) {
+      console.warn("⚠️ Không có file đang mở để lưu.");
+      return;
+    }
+
+    // Ghi đè vào file hiện tại
+    await saveToFirestore(currentDocId, tkbState);
+    //console.log("💾 Đã gọi saveToFirestore với docId:", currentDocId);
+
+    // Cập nhật lại context sau khi lưu
+    setTkbAllTeachers(prev => {
+      const updated = {
+        ...prev,
+        [currentDocId]: tkbState,
+      };
+      //console.log("🔄 Context tkbAllTeachers sau khi cập nhật:", updated);
+      return updated;
+    });
+
+    //console.log("✅ Save - Tự động thành công!)");
+  } catch (err) {
+    console.error("❌ Lỗi khi lưu TKB:", err);
+  }
+};
+
+
+const handleSaveAs = async (newDocId) => {
+  try {
+    if (!newDocId) {
+      console.warn("⚠️ Không có tên file mới để lưu.");
+      return;
+    }
+
+    // Ghi dữ liệu sang file mới
+    //await saveToFirestore(newDocId, { tkb: tkbState });
+    await saveToFirestore(newDocId, tkbState);
+
+    //console.log("📄 Đã gọi saveToFirestore với newDocId:", newDocId);
+
+    // Cập nhật lại context với file mới
+    setTkbAllTeachers(prev => {
+      const updated = {
+        ...prev,
+        [newDocId]: tkbState,
+      };
+      //console.log("🔄 Context tkbAllTeachers sau khi sao chép:", updated);
+      return updated;
+    });
+
+    // Chuyển trạng thái sang file mới
+    setCurrentDocId(newDocId);
+    setOpenFileName(newDocId);
+
+    //console.log("✅ SaveAs - Đã sao chép và mở file mới thành công!");
+  } catch (err) {
+    console.error("❌ Lỗi khi sao chép TKB:", err);
+    alert("Sao chép thất bại! Xem console để biết chi tiết.");
+  }
+};
+
 //Truyền sang App.jsx
 
 useEffect(() => {
-  if (setSaveHandler) {
-    setSaveHandler(() => handleSave); // ✅ dùng arrow để giữ đúng scope
+  if (setTuDongSaveHandler) {
+    setTuDongSaveHandler(() => handleSave); // ✅ dùng arrow để giữ đúng scope
   }
-}, [setSaveHandler, currentDocId, tkbState, tkb]);
+}, [setTuDongSaveHandler, currentDocId, tkbState, tkb]);
+
+useEffect(() => {
+  if (setTuDongSaveAsHandler) {
+    setTuDongSaveAsHandler(() => handleSaveAs);
+  }
+}, [setTuDongSaveAsHandler, tkbState]);
 
 const [openFileDialog, setOpenFileDialog] = useState(false);
 const [tkbFiles, setTkbFiles] = useState([]);

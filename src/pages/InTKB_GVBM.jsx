@@ -177,7 +177,7 @@ export default function InTKB_GVBM({ setPrintHandler, setExportHandler }) {
 
 
   // --- In toàn bộ GV ---
-  const handlePrint = () => {
+const handlePrint = () => {
   const gvList = contextRows.map((gvData) => {
     const key = normalizeName(gvData.hoTen);
     const raw = tkbAllTeachers?.[currentDocId]?.[key];
@@ -310,8 +310,29 @@ useEffect(() => {
   }
 }, [setExportHandler]);
 
-
 const formatClassSubject = (cell, selectedMon) => {
+  if (!cell) return "";
+  const { class: lop, subject } = cell;
+  if (!lop) return "";
+
+  const monList = selectedMon.split(",").map((s) => s.trim());
+  const isMulti = monList.length > 1;
+
+  if (!isMulti) return lop; // GV chỉ dạy 1 môn → không thêm hậu tố
+  if (!subject || subject.trim() === "") return lop; // ✅ Nếu không có môn → chỉ hiển thị lớp
+  if (subject.toLowerCase().includes("tin học")) return lop;
+
+  const lower = subject.toLowerCase();
+  if (lower.includes("công nghệ")) return `${lop} (CN)`;
+  if (lower.includes("âm nhạc")) return `${lop} (AN)`;
+  if (lower.includes("mĩ thuật") || lower.includes("mỹ thuật")) return `${lop} (MT)`;
+  if (lower.includes("đạo đức")) return `${lop} (ĐĐ)`;
+  if (lower.includes("thể dục")) return `${lop} (TD)`;
+
+  return `${lop} (${subject})`; // fallback giữ nguyên
+};
+
+const formatClassSubject1 = (cell, selectedMon) => {
   if (!cell) return "";
   const { class: lop, subject } = cell;
   if (!lop) return "";

@@ -9,7 +9,8 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { useSaveAsTkbAllTeachers } from '../utils/saveAsTkbAllTeachers';
 
-export default function SaveDialog({ open, onClose, saveMode, docName, setDocName }) {
+//export default function SaveDialog({ open, onClose, saveMode, docName, setDocName }) {
+export default function SaveDialog({ open, onClose, saveMode, docName, setDocName, handlers }) {
   const [files, setFiles] = useState([]);
   const { saveAsTkbAllTeachers } = useSaveAsTkbAllTeachers();
   const inputRef = useRef(null);
@@ -130,8 +131,31 @@ export default function SaveDialog({ open, onClose, saveMode, docName, setDocNam
           onClick={() => {
             if (!docName.trim()) return;
             const safeDocId = docName.trim().replace(/\//g, "-");
+            //console.log("📤 Đang lưu với tên mới:", safeDocId);
+            //console.log("🔍 saveMode hiện tại:", saveMode);
             onClose();
-            saveAsTkbAllTeachers(safeDocId);
+
+            switch (saveMode) {
+              case "saveAsGVCN":
+                //console.log("✅ Gọi saveAsGVCN");
+                handlers?.saveAsGVCN?.(safeDocId);
+                break;
+              case "saveAsGVBM":
+                //console.log("✅ Gọi saveAsGVBM");
+                handlers?.saveAsGVBM?.(safeDocId);
+                break;
+              case "saveAsToanTruong":
+                //console.log("✅ Gọi saveAsToanTruong");
+                handlers?.saveAsToanTruong?.(safeDocId);
+                break;
+              case "saveAsTuDong":
+                //console.log("✅ Gọi saveAsTuDong");
+                handlers?.saveAsTuDong?.(safeDocId);
+                break;
+              default:
+                //console.log("⚠️ Gọi fallback saveAsTkbAllTeachers");
+                saveAsTkbAllTeachers(safeDocId);
+            }
           }}
           disabled={!docName.trim()}
         >
